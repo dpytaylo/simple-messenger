@@ -1,0 +1,46 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+common = { path = "../common" }
+entity = { path = "../entity" }
+migration = { path = "../migration" }
+service = { path = "../service" }
+
+anyhow.workspace = true
+async-trait.workspace = true
+http.workspace = true
+leptos.workspace = true
+oauth2.workspace = true
+rand_chacha.workspace = true
+reqwest.workspace = true
+scrypt.workspace = true
+sea-orm.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tower-cookies.workspace = true
+tracing.workspace = true
+
+[dependencies.api-error-derive]
+workspace = true
+features = ["axum"]
+
+[dependencies.axum]
+workspace = true
+features = ["macros"]
+
+[dependencies.redis]
+workspace = true
+features = ["tokio-comp"]
+
+[dependencies.uuid]
+workspace = true
+features = ["v4", "fast-rng"]
+
+[dependencies.validator]
+workspace = true
+features = ["derive"]

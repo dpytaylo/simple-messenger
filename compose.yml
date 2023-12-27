@@ -1,0 +1,76 @@
+services:
+  server:
+    build: . 
+    restart: always
+    secrets:
+      - google_client_id
+      - google_client_secret
+      - postgres_password
+      - redis_password
+    environment:
+      LEPTOS_TAILWIND_VERSION: "v3.4.0"
+
+      REDIS_HOST: redis:6379
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+
+      POSTGRES_HOST: postgres:5432
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+
+      REDIRECT_URL: http://localhost:8080
+      GOOGLE_CLIENT_ID_FILE: /run/secrets/google_client_id
+      GOOGLE_CLIENT_SECRET_FILE: /run/secrets/google_client_secret
+    ports:
+      - 8080:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16.1-alpine3.19
+    restart: always
+    user: postgres
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: simple_messenger
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    expose:
+      - 5432
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    build:
+      context: ./config/
+      dockerfile: Dockerfile.redis
+    restart: always
+    volumes:
+      - redis-data:/data
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+
+volumes:
+  postgres-data:
+  redis-data:
+    driver: local
+
+secrets:
+  google_client_id:
+    file: ./config/secrets/google_client_id.txt
+  google_client_secret:
+    file: ./config/secrets/google_client_secret.txt
+  postgres_password:
+    file: ./config/secrets/postgres_password.txt
+  redis_password:
+    file: ./config/secrets/redis_password.txt

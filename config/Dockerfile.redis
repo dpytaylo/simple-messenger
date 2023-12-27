@@ -1,0 +1,5 @@
+FROM redis:7.2.3-alpine as redis
+COPY ./redis.conf /usr/local/etc/redis/redis.conf
+COPY ./secrets/redis_password.acl /etc/redis/redis_password.acl
+EXPOSE 6379
+CMD ["redis-server", "/usr/local/etc/redis/redis.conf"]
