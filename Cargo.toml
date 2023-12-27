@@ -1,9 +1,12 @@
 [workspace]
 members = [".", "backend", "common", "entity", "frontend", "migration", "service"]
 
+[workspace.package]
+version = "0.1.0"
+
 [package]
 name = "simple-messenger"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
 
 [lib]
