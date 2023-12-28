@@ -1,10 +1,12 @@
+use std::borrow::Cow;
+
 use common::MAX_USER_PASSWORD_SIZE;
 use leptos::{ev::Event, *};
 use leptos_router::{ActionForm, A};
 use tracing::error;
-use validator::Validate;
+use validator::{Validate, ValidationErrorsKind};
 
-use crate::validation;
+use super::form_failed::FormFailed;
 
 #[component]
 pub fn Registration() -> impl IntoView {
@@ -13,42 +15,19 @@ pub fn Registration() -> impl IntoView {
     let (password, set_password) = create_signal("".to_owned());
     let (confirm, set_confirm) = create_signal("".to_owned());
 
-    let next_step_result = next_step_action.value();
-    let error_msg = move || {
-        let Some(value) = next_step_result() else {
-            return None;
-        };
-        let err = value.expect_err("redirection");
-
-        let msg = match err {
-            ServerFnError::ServerError(val) => val,
-            other => {
-                error!(description = ?other);
-                return None;
-            }
-        };
-
-        Some(view! {
-            <p class="p-1 mb-5 bg-red-400 border-red-500 rounded-md text-sm text-white">
-                "Error(s):"<br/>
-                {msg}
-            </p>
-        })
-    };
-
     let (email_error, set_email_error) = create_signal(None);
     let (password_error, set_password_error) = create_signal(None);
     let confirm_error =
         move || with!(|password, confirm| validate_confirm(password, confirm).err());
 
     view! {
-        <div class="
+        <main class="
             absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
             max-w-xs w-full 
         ">
             <div class="mb-5 p-10 border rounded-xl shadow-md">
                 <p class="mb-5 text-xl text-center">"Create a new account"</p>
-                {error_msg}
+                <FormFailed action_value=next_step_action.value() />
                 <ActionForm action=next_step_action>
                     <div class="mb-5 space-y-4 text-sm">
                         <label class="block">
@@ -64,7 +43,7 @@ pub fn Registration() -> impl IntoView {
                                 class=("border-2", move || email_error().is_some())
                                 class=("border-red-500", move || email_error().is_some())
                             />
-                            {move || email_error().map(|err: String| view! {
+                            {move || email_error().map(|err| view! {
                                 <p class="my-1 p-1 text-red-500">{err}</p>
                             })}
                         </label>
@@ -139,34 +118,26 @@ pub fn Registration() -> impl IntoView {
             <div class="px-10 py-5 border rounded-xl shadow-md text-center text-sm">
                 "Already registered? "<A href="/authentication" class="text-blue-500 hover:text-blue-300">"Log in."</A>
             </div>
-        </div>
+        </main>
     }
 }
 
-fn validate_email(email: String) -> Result<(), String> {
+fn validate_email(email: String) -> Result<(), Cow<'static, str>> {
     #[derive(Validate)]
     struct ValidateEmail {
         #[validate(email(
-            message = "Invalid email, only supports emails based on the HTML5 spec."
+            message = "Invalid email, only supports emails based on the HTML5 spec"
         ))]
         email: String,
     }
 
     let email = ValidateEmail { email };
     email.validate().map_err(|err| {
-        let mut errors = validation::flatten(err);
-        errors.sort();
-
-        let mut buffer = String::with_capacity(errors.len());
-        for error in errors {
-            buffer.push_str(&format!(
-                "{}: {}\n",
-                error.code,
-                error.message.unwrap_or_else(|| "None".into())
-            ));
+        let mut errors = err.into_errors();
+        match errors.remove("email").unwrap() {
+            ValidationErrorsKind::Field(mut val) => val.remove(0).message.unwrap(),
+            _ => unreachable!(),
         }
-
-        buffer
     })
 }
 
@@ -174,7 +145,7 @@ fn validate_password(password: &str) -> Result<(), &'static str> {
     if password.is_empty() {
         return Err("The password field should not be empty");
     } else if password.len() > MAX_USER_PASSWORD_SIZE {
-        return Err("Shorten the password.");
+        return Err("Shorten the password");
     }
 
     Ok(())
@@ -182,7 +153,7 @@ fn validate_password(password: &str) -> Result<(), &'static str> {
 
 fn validate_confirm(password: &str, confirm: &str) -> Result<(), &'static str> {
     if password != confirm {
-        return Err("Passwords are not the same.");
+        return Err("Passwords are not the same");
     }
 
     Ok(())
