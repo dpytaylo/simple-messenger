@@ -1,4 +1,4 @@
-use common::{MAX_USER_EMAIL_SIZE, MAX_USER_NAME_SIZE};
+use common::entity::user::{MAX_USER_EMAIL_SIZE, MAX_USER_NAME_SIZE};
 use sea_orm_migration::{
     prelude::*,
     sea_orm::{EnumIter, Iterable},
@@ -26,6 +26,7 @@ enum User {
 enum RegistrationType {
     Table,
     Email,
+    Discord,
     Google,
 }
 
@@ -69,7 +70,7 @@ impl MigrationTrait for Migration {
                             .uuid()
                             .not_null()
                             .primary_key()
-                            .default(SimpleExpr::Custom("gen_random_uuid()".to_owned())),
+                            .default(SimpleExpr::Custom("gen_random_uuid()".into())),
                     )
                     .col(
                         ColumnDef::new(User::Email)
@@ -102,7 +103,7 @@ impl MigrationTrait for Migration {
                             .uuid()
                             .not_null()
                             .primary_key()
-                            .default(SimpleExpr::Custom("gen_random_uuid()".to_owned())),
+                            .default(SimpleExpr::Custom("gen_random_uuid()".into())),
                     )
                     .col(
                         ColumnDef::new(Channel::CreatedAt)
@@ -130,7 +131,7 @@ impl MigrationTrait for Migration {
                             .uuid()
                             .not_null()
                             .primary_key()
-                            .default(SimpleExpr::Custom("gen_random_uuid()".to_owned())),
+                            .default(SimpleExpr::Custom("gen_random_uuid()".into())),
                     )
                     .col(
                         ColumnDef::new(Message::CreatedAt)

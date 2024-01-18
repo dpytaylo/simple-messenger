@@ -2,12 +2,21 @@ use ::entity::{channel, channel::Entity as Channel, message, user, user::Entity 
 use sea_orm::{prelude::Uuid, *};
 use thiserror::Error;
 
+use crate::RegistrationType;
+
 pub struct Mutation;
 
 pub struct CreateUserData {
     pub email: String,
     pub password: String,
     pub name: String,
+}
+
+pub struct CreateUserOAuthData {
+    pub kind: RegistrationType,
+    pub email: String,
+    pub name: String,
+    pub avatar: Option<String>,
 }
 
 pub struct CreateMessageData {
@@ -33,8 +42,22 @@ impl Mutation {
     ) -> Result<user::ActiveModel, DbErr> {
         user::ActiveModel {
             email: Set(user_data.email),
-            password: Set(user_data.password),
+            password: Set(Some(user_data.password)),
             name: Set(user_data.name),
+            ..Default::default()
+        }
+        .save(db)
+        .await
+    }
+
+    pub async fn create_oauth_user(
+        db: &DbConn,
+        user_data: CreateUserOAuthData,
+    ) -> Result<user::ActiveModel, DbErr> {
+        user::ActiveModel {
+            email: Set(user_data.email),
+            name: Set(user_data.name),
+            avatar: Set(user_data.avatar),
             ..Default::default()
         }
         .save(db)

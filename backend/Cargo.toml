@@ -13,6 +13,8 @@ service = { path = "../service" }
 
 anyhow.workspace = true
 async-trait.workspace = true
+axum_garde.workspace = true
+garde.workspace = true
 http.workspace = true
 leptos.workspace = true
 oauth2.workspace = true
@@ -21,6 +23,7 @@ reqwest.workspace = true
 scrypt.workspace = true
 sea-orm.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 tower-cookies.workspace = true
 tracing.workspace = true
@@ -40,7 +43,3 @@ features = ["tokio-comp"]
 [dependencies.uuid]
 workspace = true
 features = ["v4", "fast-rng"]
-
-[dependencies.validator]
-workspace = true
-features = ["derive"]

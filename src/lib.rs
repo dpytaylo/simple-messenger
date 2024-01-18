@@ -30,7 +30,7 @@ pub fn App() -> impl IntoView {
             view! {
                 <ErrorTemplate
                     code=StatusCode::NOT_FOUND
-                    error="This is not the web page you are looking for.".to_owned()
+                    error="This is not the web page you are looking for.".into()
                 />
             }
         }>

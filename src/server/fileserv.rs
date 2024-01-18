@@ -39,7 +39,7 @@ pub async fn file_and_error_handler(
                 return backend::api_error_to_response(FileAndErrorHandlerError::NotFound.into());
             }
 
-            let handler = leptos_axum::render_app_to_stream(options.to_owned(), App);
+            let handler = leptos_axum::render_app_to_stream(options.into(), App);
             handler(request).await
         }
 

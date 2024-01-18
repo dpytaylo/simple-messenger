@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use ::entity::user;
+use ::entity::{sea_orm_active_enums::RegistrationType, user};
 use once_cell::sync::Lazy;
 use sea_orm::{prelude::Uuid, *};
 
@@ -9,9 +9,10 @@ pub const SECOND_UUID: Uuid = Uuid::from_u128(2654285747647781578799731831919682
 
 pub static USER_MODEL: Lazy<user::Model> = Lazy::new(|| user::Model {
     id: FIRST_UUID,
-    email: "a@a.com".to_owned(),
-    password: "123".to_owned(),
-    name: "a".to_owned(),
+    registration_type: RegistrationType::Email,
+    email: "a@a.com".into(),
+    password: Some("123".into()),
+    name: "a".into(),
     avatar: None,
 });
 
@@ -22,9 +23,9 @@ pub fn prepare_mock_db() -> DatabaseConnection {
             [(&*USER_MODEL).clone()],
             [user::Model {
                 id: SECOND_UUID,
-                email: "b@a.com".to_owned(),
-                password: "456".to_owned(),
-                name: "b".to_owned(),
+                email: "b@a.com".into(),
+                password: "456".into(),
+                name: "b".into(),
                 avatar: None,
             }],
         ])

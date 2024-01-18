@@ -22,15 +22,9 @@ mod fileserv;
 
 async fn server_fn_handler(
     State(server_state): State<ServerState>,
-    path: Path<String>,
-    headers: HeaderMap,
-    raw_query: RawQuery,
     request: Request<Body>,
 ) -> impl IntoResponse {
     leptos_axum::handle_server_fns_with_context(
-        path,
-        headers,
-        raw_query,
         move || {
             provide_context(server_state.clone());
         },

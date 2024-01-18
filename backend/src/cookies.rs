@@ -3,9 +3,11 @@ use tower_cookies::{
     Cookie,
 };
 
-pub const REGISTRATION_EMAIL_TOKEN: &str = "registration_email";
-pub const REGISTRATION_TYPE_TOKEN: &str = "registration_type";
-pub const REGISTRATION_PASSWORD_TOKEN: &str = "registration_password";
+pub const REGISTRATION_EMAIL: &str = "registration_email";
+pub const REGISTRATION_TYPE: &str = "registration_type";
+pub const REGISTRATION_PASSWORD: &str = "registration_password";
+pub const REGISTRATION_AVATAR_URI: &str = "registration_avatar_uri";
+
 pub const SESSION_TOKEN: &str = "session-token";
 
 pub fn create_secure_cookie(key: &'static str, value: String) -> Cookie {

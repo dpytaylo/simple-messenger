@@ -1,16 +1,8 @@
-use common::MAX_USER_NAME_SIZE;
+use common::entity::user::MAX_USER_NAME_SIZE;
 use leptos::*;
 use leptos_router::ActionForm;
-use tracing::debug;
-use validator::Validate;
 
-use crate::{validation, auth::form_failed::FormFailed};
-
-#[derive(Validate)]
-struct ValidName {
-    #[validate(length(min = 1, max = "MAX_USER_NAME_SIZE"))]
-    name: String,
-}
+use crate::auth::form_failed::FormFailed;
 
 #[component]
 pub fn RegistrationDetails() -> impl IntoView {
@@ -32,6 +24,8 @@ pub fn RegistrationDetails() -> impl IntoView {
                             <input
                                 type="text"
                                 name="name"
+                                // maxlength(name length) in bytes could be greater than MAX_USER_NAME_SIZE
+                                maxlength=MAX_USER_NAME_SIZE
                                 required=true
                                 placeholder="your name"
                                 class="px-2 py-1 w-full border border-gray-400 rounded-md"
@@ -63,41 +57,89 @@ pub fn RegistrationDetails() -> impl IntoView {
     }
 }
 
-fn validate_name(name: String) -> Result<(), String> {
-    let validator = ValidName { name };
-    debug!("{:?}", validator.validate());
+fn validate_name(_name: String) -> Result<(), String> {
+    // let validator = ValidName { name };
+    // debug!("{:?}", validator.validate());
 
-    validator.validate().map_err(|err| {
-        let mut errors = validation::flatten(err);
-        errors.sort();
+    // validator.validate().map_err(|err| {
+    //     let mut errors = validation::flatten(err);
+    //     errors.sort();
 
-        // debug!("{:?}", &errors);
+    //     // debug!("{:?}", &errors);
 
-        let mut buffer = String::with_capacity(errors.len());
-        for error in errors {
-            buffer.push_str(&format!(
-                "{}: {}\n",
-                error.code,
-                error.message.unwrap_or_else(|| "None".into())
-            ));
-        }
+    //     let mut buffer = String::with_capacity(errors.len());
+    //     for error in errors {
+    //         buffer.push_str(&format!(
+    //             "{}: {}\n",
+    //             error.code,
+    //             error.message.unwrap_or_else(|| "None".into())
+    //         ));
+    //     }
 
-        buffer
-    })
+    //     buffer
+    // })
+
+    Ok(())
 }
 
 #[server]
 async fn register(name: String) -> Result<(), ServerFnError> {
-    use backend::INTERNAL_SERVER_ERROR_STR;
-    use leptos_axum::extract;
+    use api_error_derive::ApiErrorData;
+    use axum::extract::State;
+    use backend::cookies::{REGISTRATION_EMAIL, REGISTRATION_PASSWORD, REGISTRATION_TYPE};
+    use backend::{
+        auth::register::{self, RegisterPayload},
+        state::ServerState,
+    };
+    use leptos_axum::extract_with_state;
+    use service::RegistrationType;
     use tower_cookies::Cookies;
-    use tracing::error;
 
-    if let Err(_) = extract(|cookies: Cookies| async move {}).await {
-        error!(description = "Failed to extract");
-        return Err(ServerFnError::ServerError(INTERNAL_SERVER_ERROR_STR.into()));
+    use crate::error::extraction_error;
+
+    let state: ServerState =
+        use_context::<ServerState>().ok_or(ServerFnError::ServerError("No server state".into()))?;
+
+    match extract_with_state(
+        state,
+        |State(state): State<ServerState>, cookies: Cookies| async move {
+            let Some(kind) = cookies.get(REGISTRATION_TYPE) else {
+                leptos_axum::redirect("/registration");
+                return Ok(());
+            };
+
+            match RegistrationType::from_str(&kind.to_string())
+                .map_err(|_| leptos_axum::redirect("/registration"))?
+            {
+                RegistrationType::Email => todo!(),
+                RegistrationType::Discord | RegistrationType::Google => {
+                    cookies.get(REGISTRATION_EMAIL);
+                }
+            }
+
+            cookies.get(REGISTRATION_PASSWORD);
+
+            let payload = RegisterPayload {
+                email,
+                password,
+                name,
+            };
+
+            if let Err(err) = register::register(state, cookies, payload).await {
+                let api_error: ApiErrorData = err.into();
+                return Err(api_error.client_description);
+            }
+
+            Ok(())
+        },
+    )
+    .await
+    .map_err(|err| extraction_error(err))
+    {
+        Ok(()) => {
+            leptos_axum::redirect("/");
+            Ok(())
+        }
+        Err(err) => Err(ServerFnError::ServerError(err)),
     }
-
-    leptos_axum::redirect("/");
-    Ok(())
 }

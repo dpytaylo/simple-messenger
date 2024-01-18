@@ -7,6 +7,7 @@ use axum::{
     routing::get,
     Router,
 };
+use common::entity::user::USER_AVATAR_SIZE;
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RevocationUrl, Scope, TokenResponse,
@@ -20,7 +21,7 @@ use tower_cookies::Cookies;
 use super::OAuthError;
 use crate::{
     auth::{oauth::OAUTH_STATE_EXPIRED, AuthRequest, AuthorizedError},
-    cookies::{self, REGISTRATION_EMAIL, REGISTRATION_TYPE},
+    cookies::{self, REGISTRATION_AVATAR_URI, REGISTRATION_EMAIL, REGISTRATION_TYPE},
     environment::Environment,
     redis::oauth,
     state::ServerState,
@@ -28,41 +29,41 @@ use crate::{
 
 pub fn routes() -> Router<ServerState> {
     Router::new()
-        .route("/", get(google))
+        .route("/", get(discord))
         .route("/authorized", get(authorized))
 }
 
 #[derive(Debug, Clone)]
-pub struct GoogleClient(Arc<BasicClient>);
+pub struct DiscordClient(Arc<BasicClient>);
 
-pub fn create_basic_client(environment: &Environment) -> GoogleClient {
-    GoogleClient(Arc::new(
+pub fn create_basic_client(environment: &Environment) -> DiscordClient {
+    DiscordClient(Arc::new(
         BasicClient::new(
-            ClientId::new(environment.google_client_id.clone()),
-            Some(ClientSecret::new(environment.google_client_secret.clone())),
-            AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into())
-                .expect("Google auth endpoint URL"),
+            ClientId::new(environment.discord_client_id.clone()),
+            Some(ClientSecret::new(environment.discord_client_secret.clone())),
+            AuthUrl::new("https://discord.com/oauth2/authorize".into())
+                .expect("Discord auth endpoint URL"),
             Some(
-                TokenUrl::new("https://oauth2.googleapis.com/token".into())
-                    .expect("Google token endpoint URL"),
+                TokenUrl::new("https://discord.com/api/oauth2/token".into())
+                    .expect("Discord token endpoint URL"),
             ),
         )
         .set_redirect_uri(
             RedirectUrl::new(format!(
-                "{}/api/auth/oauth/google/authorized",
+                "{}/api/auth/oauth/discord/authorized",
                 environment.redirect_url
             ))
-            .expect("Redirect URL for Google API"),
+            .expect("Redirect URL for Discord API"),
         )
         .set_revocation_uri(
-            RevocationUrl::new("https://oauth2.googleapis.com/revoke".into())
-                .expect("Google revocation endpoint URL"),
+            RevocationUrl::new("https://discord.com/api/oauth2/token/revoke".into())
+                .expect("Discord revocation endpoint URL"),
         ),
     ))
 }
 
-pub async fn google(
-    State(oauth): State<GoogleClient>,
+pub async fn discord(
+    State(oauth): State<DiscordClient>,
     State(redis): State<Client>,
 ) -> Result<Redirect, OAuthError> {
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -70,9 +71,8 @@ pub async fn google(
     let (auth_url, crsf_token) = oauth
         .0
         .authorize_url(CsrfToken::new_random)
-        .add_scope(Scope::new(
-            "https://www.googleapis.com/auth/userinfo.email".into(),
-        ))
+        .add_scope(Scope::new("identify".into()))
+        .add_scope(Scope::new("email".into()))
         .set_pkce_challenge(pkce_challenge)
         .url();
 
@@ -82,13 +82,15 @@ pub async fn google(
 
 #[derive(Deserialize)]
 struct UserProfile {
+    id: String,
     email: String,
+    avatar: String,
 }
 
 pub async fn authorized(
     Query(query): Query<AuthRequest>,
     cookies: Cookies,
-    State(client): State<GoogleClient>,
+    State(client): State<DiscordClient>,
     State(redis): State<Client>,
     State(reqwest): State<reqwest::Client>,
     State(db): State<DatabaseConnection>,
@@ -104,12 +106,17 @@ pub async fn authorized(
         .await?;
 
     let profile = reqwest
-        .get("https://openidconnect.googleapis.com/v1/userinfo")
+        .get("https://discordapp.com/api/users/@me")
         .bearer_auth(token.access_token().secret())
         .send()
         .await?
         .json::<UserProfile>()
         .await?;
+
+    let avatar_uri = format!(
+        "https://cdn.discordapp.com/avatars/{}/{}.webp?size={USER_AVATAR_SIZE}",
+        profile.id, profile.avatar
+    );
 
     let token_to_revoke = match token.refresh_token() {
         Some(val) => val.into(),
@@ -134,7 +141,12 @@ pub async fn authorized(
 
         cookies.add(cookies::create_secure_cookie(
             REGISTRATION_TYPE,
-            RegistrationType::Google.to_string(),
+            RegistrationType::Discord.to_string(),
+        ));
+
+        cookies.add(cookies::create_secure_cookie(
+            REGISTRATION_AVATAR_URI,
+            avatar_uri,
         ));
 
         return Ok(Redirect::to("/registration_details"));

@@ -13,6 +13,9 @@ pub struct Environment {
     pub postgres_password: String,
 
     pub redirect_url: String,
+
+    pub discord_client_id: String,
+    pub discord_client_secret: String,
     pub google_client_id: String,
     pub google_client_secret: String,
 }
@@ -20,15 +23,17 @@ pub struct Environment {
 impl Environment {
     pub fn new() -> anyhow::Result<Self> {
         Ok(Self {
-            redis_host: get_optional_env("REDIS_HOST")?
-                .unwrap_or_else(|| "localhost:6379".to_owned()),
+            redis_host: get_optional_env("REDIS_HOST")?.unwrap_or_else(|| "localhost:6379".into()),
             redis_password: get_secret("REDIS_PASSWORD")?,
 
             postgres_host: get_optional_env("POSTGRES_HOST")?
-                .unwrap_or_else(|| "localhost:5432".to_owned()),
+                .unwrap_or_else(|| "localhost:5432".into()),
             postgres_password: get_secret("POSTGRES_PASSWORD")?,
 
             redirect_url: get_env("REDIRECT_URL")?,
+
+            discord_client_id: get_secret("DISCORD_CLIENT_ID")?,
+            discord_client_secret: get_secret("DISCORD_CLIENT_SECRET")?,
             google_client_id: get_secret("GOOGLE_CLIENT_ID")?,
             google_client_secret: get_secret("GOOGLE_CLIENT_SECRET")?,
         })

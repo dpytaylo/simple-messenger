@@ -1,6 +1,7 @@
 use api_error_derive::ApiErrorData;
 use axum::response::{IntoResponse, Response};
 use axum::{Json, Router};
+use leptos::ServerFnError;
 use serde::{Deserialize, Serialize};
 use state::ServerState;
 use tracing::error;
@@ -12,7 +13,6 @@ pub mod environment;
 pub mod redis;
 pub mod session;
 pub mod state;
-pub mod validator;
 
 pub const INTERNAL_SERVER_ERROR_STR: &str = "InternalServerError";
 
@@ -44,6 +44,23 @@ pub fn api_error_to_response(error: ApiErrorData) -> Response {
 
     error!(status_code = error.status_code.as_u16(), description = error.description, %uuid);
     (error.status_code, Json(response)).into_response()
+}
+
+pub fn api_error_to_server_fn_error(error: ApiErrorData) -> ServerFnError {
+    let uuid = Uuid::new_v4();
+
+    let response = ErrorResponse {
+        error: ErrorResponseData {
+            kind: error.client_description,
+            uuid,
+        },
+    };
+
+    error!(status_code = error.status_code.as_u16(), description = error.description, %uuid);
+    ServerFnError::ServerError(
+        serde_json::to_string(&response)
+            .unwrap_or_else(|_| "serde_json serialization error".into()),
+    )
 }
 
 pub async fn mw_main_response_mapper(mut response: Response) -> Response {

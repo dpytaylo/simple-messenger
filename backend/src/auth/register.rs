@@ -1,6 +1,8 @@
 use api_error_derive::ApiError;
-use axum::extract::State;
-use common::{MAX_USER_NAME_SIZE, MAX_USER_PASSWORD_SIZE};
+use axum::{extract::State, Json};
+use axum_garde::{IntoInner, WithValidation};
+use common::entity::user::{Email, Name, Password};
+use garde::Validate;
 use rand_chacha::rand_core::OsRng;
 use redis::RedisError;
 use scrypt::{
@@ -8,27 +10,26 @@ use scrypt::{
     Scrypt,
 };
 use sea_orm::DbErr;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use service::{
     mutation::{CreateUserData, Mutation},
     query::Query,
 };
 use thiserror::Error;
 use tower_cookies::Cookies;
-use validator::Validate;
 
-use crate::{state::ServerState, validator::ValidatedJson};
+use crate::state::ServerState;
 
-#[derive(Deserialize, Validate)]
+#[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct RegisterPayload {
-    #[validate(email)]
-    pub email: String,
+    #[garde(dive)]
+    pub email: Email,
 
-    #[validate(length(min = 1, max = "MAX_USER_PASSWORD_SIZE"))]
-    pub password: String,
+    #[garde(dive)]
+    pub password: Password,
 
-    #[validate(length(min = 1, max = "MAX_USER_NAME_SIZE"))]
-    pub name: String,
+    #[garde(dive)]
+    pub name: Name,
 }
 
 #[derive(ApiError, Debug, Error)]
@@ -50,9 +51,13 @@ pub enum RegisterError {
 pub async fn register(
     mut state: ServerState,
     cookies: Cookies,
-    payload: RegisterPayload,
+    RegisterPayload {
+        email: Email(email),
+        password: Password(password),
+        name: Name(name),
+    }: RegisterPayload,
 ) -> Result<(), RegisterError> {
-    if Query::find_user_by_email(&state.db, &payload.email)
+    if Query::find_user_by_email(&state.db, &email)
         .await?
         .is_some()
     {
@@ -62,15 +67,15 @@ pub async fn register(
     let salt = SaltString::generate(&mut OsRng);
 
     let password_hash = Scrypt
-        .hash_password(payload.password.as_bytes(), &salt)?
+        .hash_password(password.as_bytes(), &salt)?
         .to_string();
 
     let mut user = Mutation::create_user(
         &state.db,
         CreateUserData {
-            email: payload.email,
+            email,
             password: password_hash,
-            name: payload.name,
+            name,
         },
     )
     .await?;
@@ -88,7 +93,9 @@ pub async fn register(
 pub async fn register_route(
     State(state): State<ServerState>,
     cookies: Cookies,
-    ValidatedJson(payload): ValidatedJson<RegisterPayload>,
+    WithValidation(payload): WithValidation<Json<RegisterPayload>>,
 ) -> Result<(), RegisterError> {
-    register(state, cookies, payload).await
+    register(state, cookies, payload.into_inner()).await
 }
+
+pub async fn register_oauth(_state: ServerState, _cookies: Cookies, _email: Email, _name: Name) {}

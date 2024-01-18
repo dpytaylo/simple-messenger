@@ -31,6 +31,9 @@ pub enum AuthorizateError {
     #[custom("InvalidEmailOrPassword")]
     InvalidPassword,
 
+    #[error("not email registration type")]
+    NotEmailRegistrationType,
+
     #[error("db error ({0})")]
     Db(#[from] DbErr),
 
@@ -50,7 +53,11 @@ pub async fn authenticate(
         return Err(AuthorizateError::AccountNotExists);
     };
 
-    let parsed_hash = PasswordHash::new(&user.password)?;
+    let Some(password) = user.password else {
+        return Err(AuthorizateError::NotEmailRegistrationType);
+    };
+
+    let parsed_hash = PasswordHash::new(&password)?;
 
     if Scrypt
         .verify_password(payload.password.as_bytes(), &parsed_hash)

@@ -2,7 +2,6 @@ use anyhow::Context;
 use axum::extract::FromRef;
 use leptos::LeptosOptions;
 use migration::{Migrator, MigratorTrait};
-use oauth2::basic::BasicClient;
 use rand_chacha::{
     rand_core::{OsRng, RngCore, SeedableRng},
     ChaCha8Rng,
@@ -11,13 +10,17 @@ use redis::Client as RedisClient;
 use reqwest::Client as ReqwestClient;
 use sea_orm::{Database, DatabaseConnection};
 
-use crate::{auth::oauth, environment::Environment};
+use crate::{
+    auth::oauth::{self, discord::DiscordClient, google::GoogleClient},
+    environment::Environment,
+};
 
-#[derive(Clone, FromRef)]
+#[derive(Clone, Debug, FromRef)]
 pub struct ServerState {
     pub random: ChaCha8Rng,
     pub reqwest: ReqwestClient,
-    pub oauth: BasicClient,
+    pub discord: DiscordClient,
+    pub google: GoogleClient,
     pub redis: RedisClient,
     pub db: DatabaseConnection,
     pub leptos_options: LeptosOptions,
@@ -34,7 +37,8 @@ impl ServerState {
             .build()
             .context("Failed to initialize reqwest::Client")?;
 
-        let oauth = oauth::google::create_basic_client(environment);
+        let discord = oauth::discord::create_basic_client(environment);
+        let google = oauth::google::create_basic_client(environment);
 
         let redis = RedisClient::open(format!(
             "redis://:{}@{}",
@@ -54,10 +58,16 @@ impl ServerState {
         Ok(Self {
             random,
             reqwest,
-            oauth,
+            discord,
+            google,
             redis,
             db,
             leptos_options,
         })
     }
+}
+
+// Required by the "axum_garde" crate
+impl axum::extract::FromRef<ServerState> for () {
+    fn from_ref(_: &ServerState) {}
 }

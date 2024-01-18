@@ -1,22 +1,29 @@
 use leptos::*;
 use leptos_router::{Route, Routes};
 
-use crate::auth::{
-    authentication::Authentication, registration::Registration,
-    registration_details::RegistrationDetails,
+use crate::{
+    auth::{
+        authentication::Authentication, registration::Registration,
+        registration_details::RegistrationDetails,
+    },
+    home::Home,
 };
 
-pub mod auth;
-pub mod chat;
+mod auth;
+mod chat;
 pub mod error_template;
-mod validation;
+
+#[cfg(feature = "ssr")]
+mod error;
+
+mod home;
 
 #[component]
 pub fn Frontend() -> impl IntoView {
     view! {
         <div class="font-content">
             <Routes>
-                <Route path="" view=|| view! { "Home url" }/>
+                <Route path="" view=Home />
                 <Route path="authentication" view=Authentication />
                 <Route path="registration" view=Registration />
                 <Route path="registration_details" view=RegistrationDetails />

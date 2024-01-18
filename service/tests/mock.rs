@@ -36,18 +36,18 @@ async fn main() {
         let user = Mutation::create_user(
             db,
             CreateUserData {
-                email: "c@a.com".to_owned(),
-                password: "password".to_owned(),
-                name: "c".to_owned(),
+                email: "c@a.com".into(),
+                password: "password".into(),
+                name: "c".into(),
             },
         )
         .await
         .unwrap();
 
         assert!(user.id.is_set());
-        assert_eq!(user.email, Unchanged("c@a.com".to_owned()));
-        assert_eq!(user.password, Unchanged("password".to_owned()));
-        assert_eq!(user.name, Unchanged("c".to_owned()));
+        assert_eq!(user.email, Unchanged("c@a.com".into()));
+        assert_eq!(user.password, Unchanged("password".into()));
+        assert_eq!(user.name, Unchanged("c".into()));
         assert_eq!(user.avatar, Unchanged(None));
     }
 }
