@@ -20,7 +20,7 @@ pub struct AuthorizatePayload {
 }
 
 #[derive(ApiError, Debug, Error)]
-pub enum AuthorizateError {
+pub enum AuthenticateError {
     #[error("the account does not exist")]
     #[status_code(BAD_REQUEST)]
     #[custom("InvalidEmailOrPassword")]
@@ -48,13 +48,13 @@ pub async fn authenticate(
     mut state: ServerState,
     cookies: Cookies,
     payload: AuthorizatePayload,
-) -> Result<(), AuthorizateError> {
+) -> Result<(), AuthenticateError> {
     let Some(user) = Query::find_user_by_email(&state.db, &payload.email).await? else {
-        return Err(AuthorizateError::AccountNotExists);
+        return Err(AuthenticateError::AccountNotExists);
     };
 
     let Some(password) = user.password else {
-        return Err(AuthorizateError::NotEmailRegistrationType);
+        return Err(AuthenticateError::NotEmailRegistrationType);
     };
 
     let parsed_hash = PasswordHash::new(&password)?;
@@ -63,7 +63,7 @@ pub async fn authenticate(
         .verify_password(payload.password.as_bytes(), &parsed_hash)
         .is_err()
     {
-        return Err(AuthorizateError::InvalidPassword);
+        return Err(AuthenticateError::InvalidPassword);
     }
 
     super::set_session_token(&mut state.random, &user.id, &state.redis, cookies).await?;
@@ -74,6 +74,6 @@ pub async fn authenticate_route(
     State(state): State<ServerState>,
     cookies: Cookies,
     Json(payload): Json<AuthorizatePayload>,
-) -> Result<(), AuthorizateError> {
+) -> Result<(), AuthenticateError> {
     authenticate(state, cookies, payload).await
 }

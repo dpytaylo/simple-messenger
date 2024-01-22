@@ -9,9 +9,9 @@ use super::sea_orm_active_enums::RegistrationType;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
+    pub registration_type: RegistrationType,
     #[sea_orm(unique)]
     pub email: String,
-    pub registration_type: Option<RegistrationType>,
     #[sea_orm(column_type = "Text", nullable)]
     pub password: Option<String>,
     pub name: String,

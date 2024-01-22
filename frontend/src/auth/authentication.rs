@@ -91,6 +91,11 @@ pub fn Authentication() -> impl IntoView {
     }
 }
 
+enum AuthenticateError {
+    NoServerState,
+
+}
+
 #[server]
 async fn authenticate(email: String, password: String) -> Result<(), ServerFnError> {
     use api_error_derive::ApiErrorData;
@@ -99,7 +104,7 @@ async fn authenticate(email: String, password: String) -> Result<(), ServerFnErr
         auth::authenticate::{self, AuthorizatePayload},
         state::ServerState,
     };
-    use leptos_axum::extractor_with_state;
+    use leptos_axum::{extractor, extractor_with_state};
     use tower_cookies::Cookies;
 
     use crate::error::extraction_error;
@@ -107,24 +112,15 @@ async fn authenticate(email: String, password: String) -> Result<(), ServerFnErr
     let state: ServerState =
         use_context::<ServerState>().ok_or(ServerFnError::ServerError("No server state".into()))?;
 
-    match extractor_with_state(
-        state,
-        |State(state): State<ServerState>, cookies: Cookies| async move {
-            if let Err(err) =
-                authenticate::authenticate(state, cookies, AuthorizatePayload { email, password })
-                    .await
-            {
-                let api_error: ApiErrorData = err.into();
-                return Err(api_error.client_description);
-            }
+    let cookies: Cookies = extractor().await?;
 
-            Ok(())
-        },
-    )
-    .await
-    .map_err(|err| extraction_error(err))?
+    if let Err(err) =
+        authenticate::authenticate(state, cookies, AuthorizatePayload { email, password })
+            .await
     {
-        Ok(()) => Ok(()),
-        Err(err) => Err(ServerFnError::ServerError(err)),
+        let api_error: ApiErrorData = err.into();
+        return Err(api_error.client_description);
     }
+
+    Ok(())
 }

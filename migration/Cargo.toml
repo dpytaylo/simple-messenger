@@ -11,7 +11,9 @@ path = "src/lib.rs"
 [dependencies]
 common = { path = "../common" }
 
-async-std = { workspace = true, features = ["attributes", "tokio1"] }
+[dependencies.async-std]
+workspace = true
+features = ["attributes", "tokio1"]
 
 [dependencies.sea-orm-migration]
 workspace = true

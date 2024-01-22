@@ -20,19 +20,6 @@ use crate::App;
 
 mod fileserv;
 
-async fn server_fn_handler(
-    State(server_state): State<ServerState>,
-    request: Request<Body>,
-) -> impl IntoResponse {
-    leptos_axum::handle_server_fns_with_context(
-        move || {
-            provide_context(server_state.clone());
-        },
-        request,
-    )
-    .await
-}
-
 pub async fn run() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
@@ -57,10 +44,6 @@ pub async fn run() -> anyhow::Result<()> {
 
     let app = Router::new()
         .nest("/api", backend::routes())
-        .route(
-            "/api/*fn_name",
-            get(server_fn_handler).post(server_fn_handler),
-        )
         .leptos_routes(&state, routes, App)
         .fallback(fileserv::file_and_error_handler)
         .layer(

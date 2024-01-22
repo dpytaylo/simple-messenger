@@ -73,14 +73,15 @@ impl MigrationTrait for Migration {
                             .default(SimpleExpr::Custom("gen_random_uuid()".into())),
                     )
                     .col(
+                        ColumnDef::new(User::RegistrationType)
+                            .enumeration(RegistrationType::Table, RegistrationType::iter().skip(1))
+                            .not_null(),
+                    )
+                    .col(
                         ColumnDef::new(User::Email)
                             .string_len(MAX_USER_EMAIL_SIZE.try_into().unwrap())
                             .unique_key()
                             .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(User::RegistrationType)
-                            .enumeration(RegistrationType::Table, RegistrationType::iter().skip(1)),
                     )
                     .col(ColumnDef::new(User::Password).text())
                     .col(
