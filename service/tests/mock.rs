@@ -5,6 +5,7 @@ use sea_orm::{prelude::Uuid, Set, Unchanged};
 use service::{
     mutation::{CreateUserData, Mutation},
     query::Query,
+    RegistrationType,
 };
 
 use crate::prepare::*;
@@ -36,6 +37,7 @@ async fn main() {
         let user = Mutation::create_user(
             db,
             CreateUserData {
+                kind: RegistrationType::Email,
                 email: "c@a.com".into(),
                 password: "password".into(),
                 name: "c".into(),
@@ -45,6 +47,7 @@ async fn main() {
         .unwrap();
 
         assert!(user.id.is_set());
+        assert_eq!(user.kind, Unchanged(RegistrationType::Email));
         assert_eq!(user.email, Unchanged("c@a.com".into()));
         assert_eq!(user.password, Unchanged("password".into()));
         assert_eq!(user.name, Unchanged("c".into()));

@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use api_error_derive::ApiError;
 use async_trait::async_trait;
 use axum::{
     extract::{FromRequestParts, Request, State},
@@ -8,8 +7,8 @@ use axum::{
     response::Response,
 };
 use http::request::Parts;
+use leptos_ssr_api_error::api_error;
 use redis::AsyncCommands;
-use thiserror::Error;
 use tower_cookies::{Cookie, Cookies};
 use uuid::Uuid;
 
@@ -21,7 +20,8 @@ pub struct SessionContext {
     pub user_id: Uuid,
 }
 
-#[derive(ApiError, Clone, Debug, Error)]
+#[derive(Clone)]
+#[api_error]
 pub enum SessionContextError {
     #[error("request should have the session token cookie")]
     AuthFailNoSessionToken,
@@ -62,7 +62,7 @@ async fn resolve_session(
         return Err(SessionContextError::RedisError);
     };
 
-    let user_id: String = match connection.get(session_cookie.value()).await {
+    let user_id: String = match connection.get(session_cookie.value_trimmed()).await {
         Ok(val) => val,
         Err(_) => {
             // TODO

@@ -1,16 +1,9 @@
 use std::mem;
 
-use api_error_derive::ApiError;
 use axum::{routing::post, Router};
-use oauth2::{
-    basic::BasicErrorResponseType, RequestTokenError, RevocationErrorResponseType,
-    StandardErrorResponse,
-};
 use rand_chacha::{rand_core::RngCore, ChaCha8Rng};
-use redis::{RedisError, RedisResult};
-use sea_orm::DbErr;
+use redis::RedisResult;
 use serde::Deserialize;
-use thiserror::Error;
 use tower_cookies::Cookies;
 use uuid::Uuid;
 
@@ -64,34 +57,4 @@ async fn set_session_token(
 pub struct AuthRequest {
     code: String,
     state: String,
-}
-
-#[derive(ApiError, Debug, Error)]
-pub enum AuthorizedError {
-    #[error("redis error ({0})")]
-    RedisError(#[from] RedisError),
-
-    #[error("request token error ({0})")]
-    RequestTokenError(
-        #[from]
-        RequestTokenError<
-            oauth2::reqwest::Error<reqwest::Error>,
-            StandardErrorResponse<BasicErrorResponseType>,
-        >,
-    ),
-
-    #[error("reqwest error ({0})")]
-    Reqwest(#[from] reqwest::Error),
-
-    #[error("failed to revoke token ({0})")]
-    FailedToRevokeToken(
-        #[from]
-        RequestTokenError<
-            oauth2::reqwest::Error<reqwest::Error>,
-            StandardErrorResponse<RevocationErrorResponseType>,
-        >,
-    ),
-
-    #[error("db error ({0})")]
-    Db(#[from] DbErr),
 }

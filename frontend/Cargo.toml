@@ -10,7 +10,6 @@ backend = { path = "../backend", optional = true }
 common = { path = "../common" }
 service = { path = "../service", optional = true }
 
-api-error-derive = { workspace = true, optional = true }
 axum = { workspace = true, optional = true }
 cfg-if.workspace = true
 garde.workspace = true
@@ -28,10 +27,11 @@ tracing.workspace = true
 
 [features]
 ssr = [
+    "common/ssr",
+
     "dep:backend",
     "dep:service",
 
-    "dep:api-error-derive",
     "dep:axum",
     "dep:leptos_axum",
     "dep:serde_qs",

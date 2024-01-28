@@ -1,6 +1,8 @@
-use common::entity::user::MAX_USER_NAME_SIZE;
+use common::{entity::user::MAX_USER_NAME_SIZE, error::auth::RegisterClientError};
 use leptos::*;
 use leptos_router::ActionForm;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::auth::form_failed::FormFailed;
 
@@ -82,64 +84,85 @@ fn validate_name(_name: String) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Clone, Debug, Error, Serialize, Deserialize)]
+pub enum RegisterSFnError {
+    #[error("extraction error")]
+    ExtractionFailed,
+
+    #[error("validation error")]
+    Validation,
+
+    #[error("invalid registration type")]
+    InvalidRegistrationType,
+
+    #[error(transparent)]
+    RegisterClient(#[from] RegisterClientError),
+}
+
 #[server]
-async fn register(name: String) -> Result<(), ServerFnError> {
-    use api_error_derive::ApiErrorData;
-    use axum::extract::State;
+async fn register(name: String) -> Result<Result<(), RegisterSFnError>, ServerFnError> {
+    Ok(register_inner(name).await)
+}
+
+#[cfg(feature = "ssr")]
+async fn register_inner(name: String) -> Result<(), RegisterSFnError> {
+    use std::str::FromStr;
+
     use backend::cookies::{REGISTRATION_EMAIL, REGISTRATION_PASSWORD, REGISTRATION_TYPE};
     use backend::{
         auth::register::{self, RegisterPayload},
         state::ServerState,
     };
-    use leptos_axum::extract_with_state;
+    use common::entity::user::{Email, Name, Password};
+    use garde::Validate;
+    use leptos_axum::extract;
     use service::RegistrationType;
     use tower_cookies::Cookies;
 
-    use crate::error::extraction_error;
+    use crate::error::ExtractionError;
 
-    let state: ServerState =
-        use_context::<ServerState>().ok_or(ServerFnError::ServerError("No server state".into()))?;
+    let state: ServerState = expect_context::<ServerState>();
+    let cookies: Cookies = extract::<_, ExtractionError>()
+        .await
+        .map_err(|_| RegisterSFnError::ExtractionFailed)?;
 
-    match extract_with_state(
-        state,
-        |State(state): State<ServerState>, cookies: Cookies| async move {
-            let Some(kind) = cookies.get(REGISTRATION_TYPE) else {
+    let (Some(kind_cookie), Some(email_cookie)) = (
+        cookies.get(REGISTRATION_TYPE),
+        cookies.get(REGISTRATION_EMAIL),
+    ) else {
+        leptos_axum::redirect("/registration");
+        return Ok(());
+    };
+
+    let kind = RegistrationType::from_str(&kind_cookie.value_trimmed())
+        .map_err(|_| RegisterSFnError::InvalidRegistrationType)?;
+
+    let password = match kind {
+        RegistrationType::Email => {
+            let Some(password) = cookies.get(REGISTRATION_PASSWORD) else {
                 leptos_axum::redirect("/registration");
                 return Ok(());
             };
 
-            match RegistrationType::from_str(&kind.to_string())
-                .map_err(|_| leptos_axum::redirect("/registration"))?
-            {
-                RegistrationType::Email => todo!(),
-                RegistrationType::Discord | RegistrationType::Google => {
-                    cookies.get(REGISTRATION_EMAIL);
-                }
-            }
-
-            cookies.get(REGISTRATION_PASSWORD);
-
-            let payload = RegisterPayload {
-                email,
-                password,
-                name,
-            };
-
-            if let Err(err) = register::register(state, cookies, payload).await {
-                let api_error: ApiErrorData = err.into();
-                return Err(api_error.client_description);
-            }
-
-            Ok(())
-        },
-    )
-    .await
-    .map_err(|err| extraction_error(err))
-    {
-        Ok(()) => {
-            leptos_axum::redirect("/");
-            Ok(())
+            Some(Password(password.value_trimmed().into()))
         }
-        Err(err) => Err(ServerFnError::ServerError(err)),
-    }
+        _ => None,
+    };
+
+    let payload = RegisterPayload {
+        kind,
+        email: Email(email_cookie.value_trimmed().into()),
+        password,
+        name: Name(name),
+    };
+
+    payload
+        .validate(&())
+        .map_err(|_| RegisterSFnError::Validation)?;
+
+    register::register(state, cookies, payload)
+        .await
+        .map_err(RegisterClientError::from)?;
+
+    Ok(())
 }

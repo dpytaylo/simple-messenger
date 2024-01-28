@@ -13,10 +13,10 @@ pub const USER_AVATAR_SIZE: usize = 256;
 #[garde(transparent)]
 pub struct Email(#[garde(email)] pub String);
 
-#[derive(Debug, Serialize, Deserialize, Validate)]
+#[derive(Serialize, Deserialize, Validate)]
 #[garde(transparent)]
-pub struct Password(#[garde(byte_length(min = 1, max = MAX_USER_PASSWORD_SIZE))] pub String);
+pub struct Password(#[garde(length(min = 1, max = MAX_USER_PASSWORD_SIZE))] pub String);
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
 #[garde(transparent)]
-pub struct Name(#[garde(byte_length(min = 1, max = MAX_USER_NAME_SIZE))] pub String);
+pub struct Name(#[garde(length(min = 1, max = MAX_USER_NAME_SIZE))] pub String);

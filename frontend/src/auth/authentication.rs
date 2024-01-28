@@ -1,6 +1,9 @@
 use common::entity::user::{MAX_USER_EMAIL_SIZE, MAX_USER_PASSWORD_SIZE};
+use common::error::auth::AuthenticateClientError;
 use leptos::*;
 use leptos_router::{ActionForm, Params};
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::auth::form_failed::FormFailed;
 
@@ -91,36 +94,56 @@ pub fn Authentication() -> impl IntoView {
     }
 }
 
-enum AuthenticateError {
-    NoServerState,
+#[derive(Clone, Debug, Error, Serialize, Deserialize)]
+pub enum AuthenticateSFnError {
+    #[error("extraction error")]
+    ExtractionFailed,
 
+    #[error("validation error")]
+    Validation,
+
+    #[error(transparent)]
+    AuthenticateClient(#[from] AuthenticateClientError),
 }
 
 #[server]
-async fn authenticate(email: String, password: String) -> Result<(), ServerFnError> {
-    use api_error_derive::ApiErrorData;
-    use axum::extract::State;
+async fn authenticate(
+    email: String,
+    password: String,
+) -> Result<Result<(), AuthenticateSFnError>, ServerFnError> {
+    Ok(authenticate_inner(email, password).await)
+}
+
+#[cfg(feature = "ssr")]
+async fn authenticate_inner(email: String, password: String) -> Result<(), AuthenticateSFnError> {
     use backend::{
         auth::authenticate::{self, AuthorizatePayload},
         state::ServerState,
     };
-    use leptos_axum::{extractor, extractor_with_state};
+    use common::entity::user::{Email, Password};
+    use garde::Validate;
+    use leptos_axum::extract;
     use tower_cookies::Cookies;
 
-    use crate::error::extraction_error;
+    use crate::error::ExtractionError;
 
-    let state: ServerState =
-        use_context::<ServerState>().ok_or(ServerFnError::ServerError("No server state".into()))?;
+    let state: ServerState = expect_context::<ServerState>();
+    let cookies: Cookies = extract::<_, ExtractionError>()
+        .await
+        .map_err(|_| AuthenticateSFnError::ExtractionFailed)?;
 
-    let cookies: Cookies = extractor().await?;
+    let payload = AuthorizatePayload {
+        email: Email(email),
+        password: Password(password),
+    };
 
-    if let Err(err) =
-        authenticate::authenticate(state, cookies, AuthorizatePayload { email, password })
-            .await
-    {
-        let api_error: ApiErrorData = err.into();
-        return Err(api_error.client_description);
-    }
+    // TODO validation
+    payload
+        .validate(&())
+        .map_err(|_| AuthenticateSFnError::Validation)?;
 
+    authenticate::authenticate(state, cookies, payload)
+        .await
+        .map_err(AuthenticateClientError::from)?;
     Ok(())
 }

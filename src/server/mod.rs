@@ -1,13 +1,8 @@
 use anyhow::bail;
-use axum::body::Body;
-use axum::extract::{Path, RawQuery, State};
-use axum::response::IntoResponse;
-use axum::routing::get;
 use axum::{middleware, Router};
 use backend::environment::Environment;
 use backend::session;
 use backend::state::ServerState;
-use http::{HeaderMap, Request};
 use leptos::{provide_context, view};
 use leptos_axum::LeptosRoutes;
 use tokio::net::TcpListener;
@@ -41,10 +36,16 @@ pub async fn run() -> anyhow::Result<()> {
     let routes = leptos_axum::generate_route_list(|| view! { <App/> });
 
     let state = ServerState::new(&environment, leptos_options.clone()).await?;
+    let state_cloned = state.clone();
 
     let app = Router::new()
         .nest("/api", backend::routes())
-        .leptos_routes(&state, routes, App)
+        .leptos_routes_with_context(
+            &state,
+            routes,
+            move || provide_context(state_cloned.clone()),
+            App,
+        )
         .fallback(fileserv::file_and_error_handler)
         .layer(
             ServiceBuilder::new()

@@ -1,4 +1,3 @@
-use api_error_derive::ApiError;
 use axum::{
     body::Body,
     extract::{Request, State},
@@ -6,14 +5,14 @@ use axum::{
 };
 use http::{StatusCode, Uri};
 use leptos::*;
-use thiserror::Error;
+use leptos_ssr_api_error::api_error;
 use tower::ServiceExt;
 use tower_http::services::ServeDir;
 use tracing::error;
 
 use crate::App;
 
-#[derive(ApiError, Debug, Error)]
+#[api_error]
 enum FileAndErrorHandlerError {
     #[error("not found")]
     #[status_code(NOT_FOUND)]

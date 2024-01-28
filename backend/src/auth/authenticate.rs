@@ -1,47 +1,27 @@
-use api_error_derive::ApiError;
 use axum::{extract::State, Json};
-use redis::RedisError;
+use axum_garde::WithValidation;
+use common::{
+    entity::user::{Email, Password},
+    error::auth::AuthenticateError,
+};
+use garde::Validate;
 use scrypt::{
     password_hash::{PasswordHash, PasswordVerifier},
     Scrypt,
 };
-use sea_orm::DbErr;
 use serde::{Deserialize, Serialize};
 use service::query::Query;
-use thiserror::Error;
 use tower_cookies::Cookies;
 
 use crate::state::ServerState;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Validate)]
 pub struct AuthorizatePayload {
-    pub email: String,
-    pub password: String,
-}
+    #[garde(dive)]
+    pub email: Email,
 
-#[derive(ApiError, Debug, Error)]
-pub enum AuthenticateError {
-    #[error("the account does not exist")]
-    #[status_code(BAD_REQUEST)]
-    #[custom("InvalidEmailOrPassword")]
-    AccountNotExists,
-
-    #[error("invalid password")]
-    #[status_code(BAD_REQUEST)]
-    #[custom("InvalidEmailOrPassword")]
-    InvalidPassword,
-
-    #[error("not email registration type")]
-    NotEmailRegistrationType,
-
-    #[error("db error ({0})")]
-    Db(#[from] DbErr),
-
-    #[error("password error ({0})")]
-    PasswordHashError(#[from] scrypt::password_hash::Error),
-
-    #[error("redis error ({0})")]
-    RedisError(#[from] RedisError),
+    #[garde(dive)]
+    pub password: Password,
 }
 
 pub async fn authenticate(
@@ -49,18 +29,23 @@ pub async fn authenticate(
     cookies: Cookies,
     payload: AuthorizatePayload,
 ) -> Result<(), AuthenticateError> {
-    let Some(user) = Query::find_user_by_email(&state.db, &payload.email).await? else {
+    let AuthorizatePayload {
+        email: Email(email),
+        password: Password(password),
+    } = payload;
+
+    let Some(user) = Query::find_user_by_email(&state.db, &email).await? else {
         return Err(AuthenticateError::AccountNotExists);
     };
 
-    let Some(password) = user.password else {
+    let Some(db_password) = user.password else {
         return Err(AuthenticateError::NotEmailRegistrationType);
     };
 
-    let parsed_hash = PasswordHash::new(&password)?;
+    let parsed_hash = PasswordHash::new(&db_password)?;
 
     if Scrypt
-        .verify_password(payload.password.as_bytes(), &parsed_hash)
+        .verify_password(password.as_bytes(), &parsed_hash)
         .is_err()
     {
         return Err(AuthenticateError::InvalidPassword);
@@ -73,7 +58,7 @@ pub async fn authenticate(
 pub async fn authenticate_route(
     State(state): State<ServerState>,
     cookies: Cookies,
-    Json(payload): Json<AuthorizatePayload>,
+    WithValidation(payload): WithValidation<Json<AuthorizatePayload>>,
 ) -> Result<(), AuthenticateError> {
-    authenticate(state, cookies, payload).await
+    authenticate(state, cookies, payload.into_inner()).await
 }

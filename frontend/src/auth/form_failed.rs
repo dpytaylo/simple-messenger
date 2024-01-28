@@ -1,30 +1,28 @@
+use std::fmt::Debug;
+
 use leptos::*;
-use tracing::error;
 
 #[component]
-pub fn FormFailed(action_value: RwSignal<Option<Result<(), ServerFnError>>>) -> impl IntoView {
+pub fn FormFailed<T: Clone + Debug + 'static>(
+    action_value: RwSignal<Option<Result<Result<(), T>, ServerFnError>>>,
+) -> impl IntoView {
     view! {
         {move || {
-            let Some(value) = action_value() else {
-                return None;
-            };
-            let err = value.expect_err("redirection");
+            let value = action_value()?;
 
-            let msg = match err {
-                ServerFnError::ServerError(val) => val,
-                other => {
-                    error!(description = ?other);
-                    return None;
-                }
+            let error = match value {
+                Ok(Ok(())) => return None,
+                Ok(Err(err)) => format!("{err:?}"),
+                Err(err) => format!("{err:?}"),
             };
 
             Some(view! {
                 <p class="
                     p-1 mb-5 bg-red-400 border-red-500 rounded-md
-                    text-sm text-white text-nowrap break-words
+                    text-sm text-white break-words
                 ">
                     "Error(s):"<br/>
-                    {msg}
+                    {error}
                 </p>
             })
         }}

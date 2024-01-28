@@ -7,6 +7,7 @@ use axum::{
     routing::get,
     Router,
 };
+use common::error::auth::{oauth::OAuthError, AuthorizedError};
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RevocationUrl, Scope, TokenResponse,
@@ -17,9 +18,8 @@ use serde::Deserialize;
 use service::{query::Query as ServiceQuery, RegistrationType};
 use tower_cookies::Cookies;
 
-use super::OAuthError;
 use crate::{
-    auth::{oauth::OAUTH_STATE_EXPIRED, AuthRequest, AuthorizedError},
+    auth::{oauth::OAUTH_STATE_EXPIRED, AuthRequest},
     cookies::{self, REGISTRATION_EMAIL, REGISTRATION_TYPE},
     environment::Environment,
     redis::oauth,

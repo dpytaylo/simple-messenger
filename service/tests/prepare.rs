@@ -1,8 +1,6 @@
-use std::str::FromStr;
-
 use ::entity::{sea_orm_active_enums::RegistrationType, user};
 use once_cell::sync::Lazy;
-use sea_orm::{prelude::Uuid, *};
+use sea_orm::prelude::Uuid;
 
 pub const FIRST_UUID: Uuid = Uuid::from_u128(271933978467241048146062564402173984327);
 pub const SECOND_UUID: Uuid = Uuid::from_u128(265428574764778157879973183191968264095);
@@ -23,6 +21,7 @@ pub fn prepare_mock_db() -> DatabaseConnection {
             [(&*USER_MODEL).clone()],
             [user::Model {
                 id: SECOND_UUID,
+                registration_type: RegistrationType::Email,
                 email: "b@a.com".into(),
                 password: "456".into(),
                 name: "b".into(),

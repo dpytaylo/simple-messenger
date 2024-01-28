@@ -4,6 +4,8 @@ use common::entity::user::{Email, Password, MAX_USER_EMAIL_SIZE, MAX_USER_PASSWO
 use garde::Validate;
 use leptos::{ev::Event, *};
 use leptos_router::{ActionForm, A};
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use super::form_failed::FormFailed;
 
@@ -171,34 +173,56 @@ fn validate_confirm(password: &str, confirm: &str) -> Result<(), &'static str> {
     Ok(())
 }
 
+#[derive(Clone, Debug, Error, Serialize, Deserialize)]
+pub enum GoToRegistrationDetailsStepError {
+    #[error("extraction error")]
+    ExtractionFailed,
+
+    #[error("password and confirm are not equal")]
+    PasswordAndConfirmNotEqual,
+}
+
 #[server]
 async fn go_to_registration_details_step(
     email: String,
     password: String,
     confirm: String,
-) -> Result<(), ServerFnError> {
+) -> Result<Result<(), GoToRegistrationDetailsStepError>, ServerFnError> {
+    Ok(go_to_registration_details_step_inner(email, password, confirm).await)
+}
+
+#[cfg(feature = "ssr")]
+async fn go_to_registration_details_step_inner(
+    email: String,
+    password: String,
+    confirm: String,
+) -> Result<(), GoToRegistrationDetailsStepError> {
     use backend::cookies::{self, REGISTRATION_EMAIL, REGISTRATION_PASSWORD, REGISTRATION_TYPE};
+    use backend::state::ServerState;
     use leptos_axum::extract;
     use service::RegistrationType;
     use tower_cookies::Cookies;
 
-    use crate::error::extraction_error;
+    use crate::error::ExtractionError;
 
-    validate_confirm(&password, &confirm).map_err(|err| ServerFnError::ServerError(err.into()))?;
+    let cookies: Cookies = extract::<_, ExtractionError>()
+        .await
+        .map_err(|_| GoToRegistrationDetailsStepError::ExtractionFailed)?;
 
-    extract(|cookies: Cookies| async move {
-        cookies.add(cookies::create_secure_cookie(REGISTRATION_EMAIL, email));
-        cookies.add(cookies::create_secure_cookie(
-            REGISTRATION_TYPE,
-            RegistrationType::Email.to_string(),
-        ));
-        cookies.add(cookies::create_secure_cookie(
-            REGISTRATION_PASSWORD,
-            password,
-        ));
-    })
-    .await
-    .map_err(|err| extraction_error(err))?;
+    validate_confirm(&password, &confirm)
+        .map_err(|_| GoToRegistrationDetailsStepError::PasswordAndConfirmNotEqual)?;
+
+    cookies.add(cookies::create_secure_cookie(
+        REGISTRATION_TYPE,
+        RegistrationType::Email.to_string(),
+    ));
+
+    cookies.add(cookies::create_secure_cookie(REGISTRATION_EMAIL, email));
+
+    cookies.add(cookies::create_secure_cookie(
+        REGISTRATION_PASSWORD,
+        password,
+    ));
 
     leptos_axum::redirect("/registration_details");
     Ok(())

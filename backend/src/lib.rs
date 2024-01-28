@@ -1,7 +1,7 @@
-use api_error_derive::ApiErrorData;
 use axum::response::{IntoResponse, Response};
 use axum::{Json, Router};
 use leptos::ServerFnError;
+use leptos_ssr_api_error::ApiErrorData;
 use serde::{Deserialize, Serialize};
 use state::ServerState;
 use tracing::error;

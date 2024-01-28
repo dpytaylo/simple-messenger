@@ -11,11 +11,8 @@ use crate::{
 
 mod auth;
 mod chat;
-pub mod error_template;
-
-#[cfg(feature = "ssr")]
 mod error;
-
+pub mod error_template;
 mod home;
 
 #[component]

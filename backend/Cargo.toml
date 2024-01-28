@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-common = { path = "../common" }
+common = { path = "../common", features = ["ssr"] }
 entity = { path = "../entity" }
 migration = { path = "../migration" }
 service = { path = "../service" }
@@ -17,6 +17,7 @@ axum_garde.workspace = true
 garde.workspace = true
 http.workspace = true
 leptos.workspace = true
+leptos-ssr-api-error.workspace = true
 oauth2.workspace = true
 rand_chacha.workspace = true
 reqwest.workspace = true
@@ -27,10 +28,6 @@ serde_json.workspace = true
 thiserror.workspace = true
 tower-cookies.workspace = true
 tracing.workspace = true
-
-[dependencies.api-error-derive]
-workspace = true
-features = ["axum"]
 
 [dependencies.axum]
 workspace = true
@@ -43,3 +40,7 @@ features = ["tokio-comp"]
 [dependencies.uuid]
 workspace = true
 features = ["v4", "fast-rng"]
+
+[features]
+default = ["ssr"]
+ssr = []

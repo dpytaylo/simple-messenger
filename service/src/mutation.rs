@@ -1,4 +1,7 @@
-use ::entity::{channel, channel::Entity as Channel, message, user, user::Entity as User};
+use ::entity::{
+    channel, channel::Entity as Channel, message,
+    sea_orm_active_enums::RegistrationType as DbRegistrationType, user, user::Entity as User,
+};
 use sea_orm::{prelude::Uuid, *};
 use thiserror::Error;
 
@@ -7,8 +10,9 @@ use crate::RegistrationType;
 pub struct Mutation;
 
 pub struct CreateUserData {
+    pub kind: RegistrationType,
     pub email: String,
-    pub password: String,
+    pub password: Option<String>,
     pub name: String,
 }
 
@@ -40,9 +44,16 @@ impl Mutation {
         db: &DbConn,
         user_data: CreateUserData,
     ) -> Result<user::ActiveModel, DbErr> {
+        let kind = match user_data.kind {
+            RegistrationType::Email => DbRegistrationType::Email,
+            RegistrationType::Discord => DbRegistrationType::Discord,
+            RegistrationType::Google => DbRegistrationType::Google,
+        };
+
         user::ActiveModel {
+            registration_type: Set(kind),
             email: Set(user_data.email),
-            password: Set(Some(user_data.password)),
+            password: Set(user_data.password),
             name: Set(user_data.name),
             ..Default::default()
         }
