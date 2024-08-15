@@ -4,28 +4,6 @@ version.workspace = true
 edition = "2021"
 
 [dependencies]
-axum = { workspace = true, optional = true }
-cfg-if.workspace = true
 garde.workspace = true
-http = { workspace = true, optional = true }
-leptos-ssr-api-error.workspace = true
-oauth2 = { workspace = true, optional = true }
-redis = { workspace = true, optional = true }
-reqwest = { workspace = true, optional = true }
-sea-orm = { workspace = true, optional = true }
+rpc.workspace = true
 serde.workspace = true
-scrypt = { workspace = true, optional = true }
-strum = { workspace = true, optional = true }
-thiserror.workspace = true
-
-[features]
-ssr = [
-    "dep:axum",
-    "dep:http",
-    "dep:oauth2",
-    "dep:redis",
-    "dep:reqwest",
-    "dep:sea-orm",
-    "dep:scrypt",
-    "dep:strum",
-]

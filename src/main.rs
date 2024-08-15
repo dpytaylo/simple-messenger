@@ -1,5 +1,3 @@
-#![feature(lazy_cell)]
-
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

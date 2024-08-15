@@ -1,33 +1,50 @@
+use std::sync::Arc;
+
+use anyhow::anyhow;
 use axum::{
     body::Body,
     extract::{Request, State},
     response::{IntoResponse, Response},
 };
+use backend::error::wrap_error;
+use backend::state::ServerState;
 use http::{StatusCode, Uri};
 use leptos::*;
-use leptos_ssr_api_error::api_error;
+use strum::IntoStaticStr;
+use thiserror::Error;
 use tower::ServiceExt;
 use tower_http::services::ServeDir;
 use tracing::error;
 
 use crate::App;
 
-#[api_error]
+#[derive(Debug, Error, IntoStaticStr)]
 enum FileAndErrorHandlerError {
     #[error("not found")]
-    #[status_code(NOT_FOUND)]
     NotFound,
 
-    #[error("internal server error")]
-    InternalServerError,
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
+impl IntoResponse for FileAndErrorHandlerError {
+    fn into_response(self) -> Response {
+        let code = match self {
+            FileAndErrorHandlerError::NotFound => StatusCode::NOT_FOUND,
+            FileAndErrorHandlerError::Other(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        wrap_error(code, self)
+    }
+}
+
+#[axum::debug_handler]
 pub async fn file_and_error_handler(
     uri: Uri,
-    State(options): State<LeptosOptions>,
+    State(state): State<Arc<ServerState>>,
     request: Request<Body>,
 ) -> Response {
-    let root = options.site_root.clone();
+    let root = state.leptos_options.site_root.clone();
     let response = get_static_file(uri.clone(), &root).await;
 
     match response.status() {
@@ -35,14 +52,18 @@ pub async fn file_and_error_handler(
 
         StatusCode::NOT_FOUND => {
             if uri.path().starts_with("/api/") {
-                return backend::api_error_to_response(FileAndErrorHandlerError::NotFound.into());
+                return FileAndErrorHandlerError::NotFound.into_response();
             }
 
-            let handler = leptos_axum::render_app_to_stream(options.into(), App);
+            let handler =
+                leptos_axum::render_app_to_stream(state.leptos_options.clone().into(), App);
             handler(request).await
         }
 
-        _ => backend::api_error_to_response(FileAndErrorHandlerError::InternalServerError.into()),
+        code => FileAndErrorHandlerError::Other(anyhow!(
+            "Invalid 'get_static_file()' response answer status code ({code})"
+        ))
+        .into_response(),
     }
 }
 

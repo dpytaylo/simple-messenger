@@ -5,20 +5,14 @@ use ::entity::{
 use sea_orm::{prelude::Uuid, *};
 use thiserror::Error;
 
-use crate::RegistrationType;
+use crate::RegistrationKind;
 
 pub struct Mutation;
 
 pub struct CreateUserData {
-    pub kind: RegistrationType,
+    pub kind: RegistrationKind,
     pub email: String,
     pub password: Option<String>,
-    pub name: String,
-}
-
-pub struct CreateUserOAuthData {
-    pub kind: RegistrationType,
-    pub email: String,
     pub name: String,
     pub avatar: Option<String>,
 }
@@ -45,28 +39,15 @@ impl Mutation {
         user_data: CreateUserData,
     ) -> Result<user::ActiveModel, DbErr> {
         let kind = match user_data.kind {
-            RegistrationType::Email => DbRegistrationType::Email,
-            RegistrationType::Discord => DbRegistrationType::Discord,
-            RegistrationType::Google => DbRegistrationType::Google,
+            RegistrationKind::Email => DbRegistrationType::Email,
+            RegistrationKind::Discord => DbRegistrationType::Discord,
+            RegistrationKind::Google => DbRegistrationType::Google,
         };
 
         user::ActiveModel {
             registration_type: Set(kind),
             email: Set(user_data.email),
             password: Set(user_data.password),
-            name: Set(user_data.name),
-            ..Default::default()
-        }
-        .save(db)
-        .await
-    }
-
-    pub async fn create_oauth_user(
-        db: &DbConn,
-        user_data: CreateUserOAuthData,
-    ) -> Result<user::ActiveModel, DbErr> {
-        user::ActiveModel {
-            email: Set(user_data.email),
             name: Set(user_data.name),
             avatar: Set(user_data.avatar),
             ..Default::default()

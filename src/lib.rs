@@ -1,5 +1,5 @@
 use cfg_if::cfg_if;
-use frontend::{error_template::ErrorTemplate, Frontend};
+use frontend::{ErrorTemplate, Frontend};
 use http::StatusCode;
 use leptos::{component, view, IntoView};
 use leptos_meta::*;
@@ -41,12 +41,27 @@ pub fn App() -> impl IntoView {
 
 cfg_if! { if #[cfg(feature = "hydrate")] {
     use leptos::*;
+    use tracing_web::{MakeWebConsoleWriter, performance_layer};
+    use tracing_subscriber::fmt::format::Pretty;
+    use tracing_subscriber::prelude::*;
     use wasm_bindgen::prelude::wasm_bindgen;
 
     #[wasm_bindgen]
     pub fn hydrate() {
         console_error_panic_hook::set_once();
-        tracing_wasm::set_as_global_default();
+
+        let fmt_layer = tracing_subscriber::fmt::layer()
+            .with_ansi(false) // Only partially supported across browsers
+            .without_time()   // std::time is not available in browsers
+            .with_writer(MakeWebConsoleWriter::new()) // write events to the console
+            .with_filter(tracing::level_filters::LevelFilter::DEBUG);
+
+        let perf_layer = performance_layer().with_details_from_fields(Pretty::default());
+
+        tracing_subscriber::registry()
+            .with(fmt_layer)
+            .with(perf_layer)
+            .init();
 
         leptos::mount_to_body(move || {
             view! { <App/> }

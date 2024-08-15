@@ -3,21 +3,23 @@ name = "backend"
 version.workspace = true
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-common = { path = "../common", features = ["ssr"] }
+common = { path = "../common" }
 entity = { path = "../entity" }
 migration = { path = "../migration" }
 service = { path = "../service" }
 
+rpc = { workspace = true, features = ["server"] }
+
 anyhow.workspace = true
 async-trait.workspace = true
+axum-extra.workspace = true
 axum_garde.workspace = true
+chrono.workspace = true
 garde.workspace = true
 http.workspace = true
+jsonwebtoken.workspace = true
 leptos.workspace = true
-leptos-ssr-api-error.workspace = true
 oauth2.workspace = true
 rand_chacha.workspace = true
 reqwest.workspace = true
@@ -25,22 +27,20 @@ scrypt.workspace = true
 sea-orm.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+strum.workspace = true
+time.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
+tower.workspace = true
+tower-http.workspace = true
 tower-cookies.workspace = true
+tower-sessions.workspace = true
 tracing.workspace = true
 
 [dependencies.axum]
 workspace = true
 features = ["macros"]
 
-[dependencies.redis]
-workspace = true
-features = ["tokio-comp"]
-
 [dependencies.uuid]
 workspace = true
 features = ["v4", "fast-rng"]
-
-[features]
-default = ["ssr"]
-ssr = []

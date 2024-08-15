@@ -1,6 +1,7 @@
 use common::entity::user::{MAX_USER_EMAIL_SIZE, MAX_USER_NAME_SIZE};
 use sea_orm_migration::{
     prelude::*,
+    schema::*,
     sea_orm::{EnumIter, Iterable},
     sea_query::extension::postgres::Type,
 };
@@ -83,7 +84,7 @@ impl MigrationTrait for Migration {
                             .unique_key()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(User::Password).text())
+                    .col(text(User::Password))
                     .col(
                         ColumnDef::new(User::Name)
                             .string_len(MAX_USER_NAME_SIZE.try_into().unwrap())
@@ -140,9 +141,9 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .default(Expr::current_timestamp()),
                     )
-                    .col(ColumnDef::new(Message::SenderId).uuid().not_null())
-                    .col(ColumnDef::new(Message::ChannelId).uuid().not_null())
-                    .col(ColumnDef::new(Message::Content).string().not_null())
+                    .col(uuid(Message::SenderId))
+                    .col(uuid(Message::ChannelId))
+                    .col(uuid(Message::Content))
                     .to_owned(),
             )
             .await?;

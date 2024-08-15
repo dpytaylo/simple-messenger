@@ -9,14 +9,14 @@ pub const MAX_USER_PASSWORD_SIZE: usize = 100;
 
 pub const USER_AVATAR_SIZE: usize = 256;
 
-#[derive(Debug, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Validate)]
 #[garde(transparent)]
 pub struct Email(#[garde(email)] pub String);
 
-#[derive(Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Validate)]
 #[garde(transparent)]
 pub struct Password(#[garde(length(min = 1, max = MAX_USER_PASSWORD_SIZE))] pub String);
 
-#[derive(Debug, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Validate)]
 #[garde(transparent)]
 pub struct Name(#[garde(length(min = 1, max = MAX_USER_NAME_SIZE))] pub String);

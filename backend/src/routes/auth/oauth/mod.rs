@@ -1,0 +1,57 @@
+use axum::{
+    response::{IntoResponse, Response},
+    routing::get,
+    Router,
+};
+use common::routes::auth::oauth::OAuthClientError;
+use http::StatusCode;
+use serde::Deserialize;
+use strum::IntoStaticStr;
+use thiserror::Error;
+use token::token_route;
+
+use crate::{error::wrap_error, state::ServerStateWrapper};
+
+pub mod discord;
+pub mod google;
+pub mod token;
+
+pub const CSRF_TOKEN_KEY: &str = "csrf-token";
+pub const PKCE_VERIFIER_KEY: &str = "pkce-verifier";
+
+pub fn routes() -> Router<ServerStateWrapper> {
+    Router::new()
+        .nest("/discord", discord::routes())
+        .nest("/google", google::routes())
+        .route("/token", get(token_route))
+}
+
+#[derive(Deserialize)]
+pub struct AuthRequest {
+    code: String,
+    state: String,
+}
+
+#[derive(Debug, Error, IntoStaticStr)]
+pub enum OAuthError {
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
+}
+
+impl IntoResponse for OAuthError {
+    fn into_response(self) -> Response {
+        let code = match self {
+            OAuthError::Other(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        wrap_error(code, self)
+    }
+}
+
+impl Into<OAuthClientError> for OAuthError {
+    fn into(self) -> OAuthClientError {
+        match self {
+            OAuthError::Other(_) => OAuthClientError::Other,
+        }
+    }
+}

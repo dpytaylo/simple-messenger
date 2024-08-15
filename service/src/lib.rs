@@ -1,13 +1,8 @@
-use serde::{Deserialize, Serialize};
-use strum::{Display, EnumString};
-
 pub mod mutation;
 pub mod query;
 
-#[derive(Debug, Display, EnumString, Serialize, Deserialize)]
-pub enum RegistrationType {
+pub enum RegistrationKind {
     Email,
-
     Discord,
     Google,
 }

@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+    .message-before-appear {
+        opacity: 0;
+        scale: 0.8;
+        transition: opacity 0.3s, scale 0.3s;
+    }
+    
+    .message-after-appear {
+        opacity: 1;
+        scale: 1;
+        transition: opacity 0.3s, scale 0.3s;
+    }
+}

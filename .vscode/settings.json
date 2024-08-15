@@ -1,31 +1,32 @@
 {
-  "emmet.includeLanguages": {
-    "rust": "html",
-    "*.rs": "html"
-  },
-  
-  "tailwindCSS.includeLanguages": {
-      "rust": "html",
-      "*.rs": "html"
-  },
+    "[rust]": {
+        "editor.formatOnSave": true
+    },
 
-  "files.associations": {
-      "*.rs": "rust"
-  },
+    "tailwindCSS.includeLanguages": {
+        "rust": "html",
+        "*.rs": "html"
+    },
 
-  "editor.quickSuggestions": {
-    "other": "on",
-    "comments": "on",
-    "strings": true
-  },
+    "files.associations": {
+        "*.rs": "rust"
+    },
 
-  "css.validate": true,
+    "editor.quickSuggestions": {
+        "other": "on",
+        "comments": "on",
+        "strings": true
+    },
 
-  "rust-analyzer.cargo.features": [
-    "ssr"
-  ],
+    "css.validate": true,
+    "rust-analyzer.cargo.features": [
+        "ssr"
+    ],
 
-  "rust-analyzer.linkedProjects": [
-    ".\\migration\\Cargo.toml"
-  ],
+//     "rust-analyzer.server.extraEnv": {  
+//         "CARGO_TARGET_DIR": "target/rust-analyzer"  
+//     },  
+//    "rust-analyzer.check.extraArgs": [  
+//         "--target-dir=target/rust-analyzer"  
+//     ]  
 }

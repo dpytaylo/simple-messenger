@@ -3,12 +3,9 @@ name = "frontend"
 version.workspace = true
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 backend = { path = "../backend", optional = true }
 common = { path = "../common" }
-service = { path = "../service", optional = true }
 
 axum = { workspace = true, optional = true }
 cfg-if.workspace = true
@@ -18,22 +15,32 @@ http.workspace = true
 leptos.workspace = true
 leptos_axum = { workspace = true, optional = true }
 leptos_meta.workspace = true
+leptos_reactive.workspace = true
 leptos_router.workspace = true
+leptos-use.workspace = true
 serde.workspace = true
-serde_qs = { workspace = true, optional = true }
+# serde_qs = { workspace = true, optional = true }
 thiserror.workspace = true
-tower-cookies = { workspace = true, optional = true }
+tower-sessions = { workspace = true, optional = true }
 tracing.workspace = true
+uuid = { workspace = true, features = ["v4", "fast-rng"] }
 
 [features]
+hydrate = [
+    "leptos/hydrate",
+    "leptos_meta/hydrate",
+    "leptos_router/hydrate",
+]
+
 ssr = [
-    "common/ssr",
+    "leptos/ssr",
+    "leptos_meta/ssr",
+    "leptos_router/ssr",
+    "leptos-use/ssr",
 
     "dep:backend",
-    "dep:service",
 
     "dep:axum",
     "dep:leptos_axum",
-    "dep:serde_qs",
-    "dep:tower-cookies",
+    "dep:tower-sessions",
 ]

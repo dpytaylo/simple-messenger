@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Context;
 use axum::extract::FromRef;
 use leptos::LeptosOptions;
@@ -6,31 +8,37 @@ use rand_chacha::{
     rand_core::{OsRng, RngCore, SeedableRng},
     ChaCha8Rng,
 };
-use redis::Client as RedisClient;
 use reqwest::Client as ReqwestClient;
 use sea_orm::{Database, DatabaseConnection};
 
 use crate::{
-    auth::oauth::{self, discord::DiscordClient, google::GoogleClient},
+    authorization::Keys,
     environment::Environment,
+    routes::auth::oauth::{self, discord::DiscordClient, google::GoogleClient},
+    utils::memory_storage::MemoryStorage,
 };
 
-#[derive(Clone, Debug, FromRef)]
+#[derive(Clone, FromRef)]
+pub struct ServerStateWrapper {
+    pub inner: Arc<ServerState>,
+}
+
 pub struct ServerState {
+    pub leptos_options: LeptosOptions,
     pub random: ChaCha8Rng,
     pub reqwest: ReqwestClient,
     pub discord: DiscordClient,
     pub google: GoogleClient,
-    pub redis: RedisClient,
     pub db: DatabaseConnection,
-    pub leptos_options: LeptosOptions,
+    pub keys: Keys,
+    pub mem: MemoryStorage,
 }
 
-impl ServerState {
+impl ServerStateWrapper {
     pub async fn new(
         environment: &Environment,
         leptos_options: LeptosOptions,
-    ) -> anyhow::Result<Self> {
+    ) -> anyhow::Result<ServerStateWrapper> {
         let random = ChaCha8Rng::seed_from_u64(OsRng.next_u64());
         let reqwest = ReqwestClient::builder()
             .brotli(true)
@@ -40,34 +48,45 @@ impl ServerState {
         let discord = oauth::discord::create_basic_client(environment);
         let google = oauth::google::create_basic_client(environment);
 
-        let redis = RedisClient::open(format!(
-            "redis://:{}@{}",
-            environment.redis_password, environment.redis_host,
-        ))
-        .context("Redis connection failed")?;
-
         let db = Database::connect(format!(
             "postgres://postgres:{}@{}/simple_messenger",
             environment.postgres_password, environment.postgres_host,
         ))
         .await
         .context("SeaORM connection failed")?;
-
         Migrator::up(&db, None).await?;
 
-        Ok(Self {
+        let keys = Keys::new(environment.jwt_secret.as_bytes());
+        let mem = MemoryStorage::new();
+
+        let this = ServerState {
             random,
             reqwest,
             discord,
             google,
-            redis,
             db,
             leptos_options,
+            keys,
+            mem,
+        };
+
+        Ok(Self {
+            inner: Arc::new(this),
         })
     }
 }
 
 // Required by the "axum_garde" crate
-impl axum::extract::FromRef<ServerState> for () {
-    fn from_ref(_: &ServerState) {}
+impl axum::extract::FromRef<ServerStateWrapper> for () {
+    fn from_ref(_: &ServerStateWrapper) {}
 }
+
+impl axum::extract::FromRef<ServerStateWrapper> for LeptosOptions {
+    fn from_ref(this: &ServerStateWrapper) -> LeptosOptions {
+        this.inner.leptos_options.clone()
+    }
+}
+
+// impl axum::extract::FromRef<Arc<ServerState>> for () {
+//     fn from_ref(_: &Arc<ServerState>) {}
+// }

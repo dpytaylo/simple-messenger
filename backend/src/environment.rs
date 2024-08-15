@@ -6,6 +6,8 @@ use std::{
 use anyhow::{anyhow, bail, Context};
 
 pub struct Environment {
+    pub jwt_secret: String,
+
     pub redis_host: String,
     pub redis_password: String,
 
@@ -23,6 +25,8 @@ pub struct Environment {
 impl Environment {
     pub fn new() -> anyhow::Result<Self> {
         Ok(Self {
+            jwt_secret: get_env("JWT_SECRET")?,
+
             redis_host: get_optional_env("REDIS_HOST")?.unwrap_or_else(|| "localhost:6379".into()),
             redis_password: get_secret("REDIS_PASSWORD")?,
 
