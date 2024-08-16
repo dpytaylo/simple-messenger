@@ -1,7 +1,10 @@
 use leptos::{create_effect, RwSignal, ServerFnError};
+use rpc::error::RpcError;
 use tracing::error;
 
-use crate::components::alert_message::{AlertMessages, MessageOptions, MessageVariant};
+use crate::components::alert_message::{
+    use_alert_message, AlertMessages, MessageOptions, MessageVariant,
+};
 
 pub fn wrap_action_value<Response, ResponseError>(
     alert: AlertMessages,
@@ -32,4 +35,37 @@ pub fn wrap_action_value<Response, ResponseError>(
         }
         None => (),
     });
+}
+
+pub fn log_rpc_error(rpc_error: RpcError) {
+    let alert = use_alert_message();
+
+    match rpc_error {
+        RpcError::Network(err) => {
+            error!(title = "RPC error", error = %err);
+            alert.create(
+                "The connection to the server could not be established. Please try again later.",
+                MessageVariant::Failure,
+                Default::default(),
+            );
+        }
+
+        RpcError::ValidationError(err) => {
+            error!(title = "RPC validation error", error = ?err);
+            alert.create(
+                "An error occurred while processing the request. Please try again later.",
+                MessageVariant::Failure,
+                Default::default(),
+            );
+        }
+
+        RpcError::Deserialize | RpcError::NotFound | RpcError::Other => {
+            error!(title = "Server function error", error = ?rpc_error);
+            alert.create(
+                "An error occurred while processing the request. Please try again later.",
+                MessageVariant::Failure,
+                Default::default(),
+            );
+        }
+    }
 }

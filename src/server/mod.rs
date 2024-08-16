@@ -17,7 +17,7 @@ mod fileserv;
 
 pub async fn run() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(tracing::Level::INFO)
         .init();
 
     match dotenvy::dotenv() {

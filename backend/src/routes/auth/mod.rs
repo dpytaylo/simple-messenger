@@ -18,7 +18,6 @@ pub mod register_data;
 pub fn routes() -> Router<ServerStateWrapper> {
     Router::new()
         .nest("/oauth", oauth::routes())
-        .route_rpc(Authenticate, post(authenticate::authenticate_route))
         .route("/register", post(register::register_route))
 }
 

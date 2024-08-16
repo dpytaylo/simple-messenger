@@ -2,13 +2,12 @@ use std::time::Duration;
 
 use common::{
     entity::user::{Email, Password},
-    routes::auth::authenticate::{
-        AuthenticateClientError, AuthenticateRequest, AuthenticateResponse,
-    },
+    routes::auth::authenticate::{Authenticate, AuthenticateError, AuthenticateRequest},
 };
+use ev::SubmitEvent;
 use garde::Validate;
 use leptos::*;
-use leptos_router::{use_navigate, ActionForm, NavigateOptions};
+use leptos_router::{use_navigate, NavigateOptions};
 use tracing::error;
 
 use crate::{
@@ -19,19 +18,20 @@ use crate::{
         or_break::OrBreak,
     },
     pages::{app::APP_PAGE_URL, auth::form_failed::FormFailed},
-    utils::{authorization::use_authorization, error::wrap_action_value},
+    utils::{authorization::use_authorization, error::log_rpc_error, rpc_provider::use_rpc_client},
 };
 
 pub const AUTHENTICATION_PAGE_URL: &str = "authentication";
 
 #[component]
 pub fn Authentication() -> impl IntoView {
-    let navigate = use_navigate();
-    let alert = use_alert_message();
-    let authorization = use_authorization();
+    // let navigate = use_navigate();
+    // let alert = use_alert_message();
+    // let authorization = use_authorization();
+    // let rpc_client = use_rpc_client();
 
-    let action = create_server_action::<Authenticate>();
-    let action_value = action.value();
+    let (email, set_email) = create_signal("".to_owned());
+    let (password, set_password) = create_signal("".to_owned());
 
     let (email_error, set_email_error) = create_signal(None);
     let (password_error, set_password_error) = create_signal(None);
@@ -39,43 +39,74 @@ pub fn Authentication() -> impl IntoView {
 
     let (form_failed, set_form_failed) = create_signal(None);
 
-    wrap_action_value(alert.clone(), action_value, move |val| {
-        let mut form = None;
-        match val {
-            Ok(val) => {
-                authorization.authorizate(val.token);
-                alert.create(
-                    "Successfully authenticated",
-                    MessageVariant::Success,
-                    MessageOptions {
-                        duration: Some(Duration::from_secs(3)),
-                        ..Default::default()
-                    },
-                );
-                navigate(APP_PAGE_URL, NavigateOptions::default());
-            }
-            Err(err) => match err {
-                AuthenticateClientError::InvalidCredentials => {
-                    form = Some("Invalid email or password.".into());
-                }
-                AuthenticateClientError::Other => {
-                    let description = format!("{err:?}");
-                    error!(title = "Authentication failed", description = description);
+    let authenticate = create_action(move |input: &AuthenticateRequest| {
+        // let navigate = navigate.clone();
+        // let alert = alert.clone();
+        // let authorization = authorization.clone();
+        // let rpc_client = rpc_client.clone();
+        let input = input.clone();
 
+        let navigate = use_navigate();
+        let alert = use_alert_message();
+        let authorization = use_authorization();
+        let rpc_client = use_rpc_client();
+
+        async move {
+            let rpc_result = rpc_client.call::<Authenticate>(input).await;
+            let result = match rpc_result {
+                Ok(val) => val,
+                Err(err) => {
+                    log_rpc_error(err);
+                    return;
+                }
+            };
+
+            let mut form = None;
+            match result {
+                Ok(val) => {
+                    authorization.authorizate(val.token);
                     alert.create(
-                        "Authentication failed",
-                        MessageVariant::Failure,
+                        "Successfully authenticated",
+                        MessageVariant::Success,
                         MessageOptions {
-                            description: Some(description),
+                            duration: Some(Duration::from_secs(3)),
                             ..Default::default()
                         },
                     );
+                    navigate(APP_PAGE_URL, NavigateOptions::default());
                 }
-            },
-        }
+                Err(err) => match err {
+                    AuthenticateError::InvalidCredentials => {
+                        form = Some("Invalid email or password.".into());
+                    }
+                    AuthenticateError::Other => {
+                        let description = format!("{err:?}");
+                        error!(title = "Authentication failed", description = description);
 
-        set_form_failed(form);
+                        alert.create(
+                            "Authentication failed",
+                            MessageVariant::Failure,
+                            MessageOptions {
+                                description: Some(description),
+                                ..Default::default()
+                            },
+                        );
+                    }
+                },
+            }
+
+            set_form_failed(form);
+        }
     });
+
+    let on_submit = move |ev: SubmitEvent| {
+        ev.prevent_default();
+
+        authenticate.dispatch(AuthenticateRequest {
+            email: Email(email.get_untracked()),
+            password: Password(password.get_untracked()),
+        });
+    };
 
     view! {
         <main class="
@@ -85,7 +116,7 @@ pub fn Authentication() -> impl IntoView {
             <div class="mb-5 p-10 border rounded-xl shadow-md">
                 <p class="mb-3 text-xl text-center">"Welcome back!"</p>
                 <FormFailed value=form_failed />
-                <ActionForm action=action>
+                <form on:submit=on_submit>
                     <div class="mb-5 space-y-4">
                         <label class="block">
                             <p class="mb-1 text-sm">"Email"</p>
@@ -101,10 +132,16 @@ pub fn Authentication() -> impl IntoView {
                                 autocomplete="email"
 
                                 on:input=move |ev| {
-                                    let err = Email(event_target_value(&ev)).validate().err().map(|val| val.to_string());
+                                    let email = event_target_value(&ev);
+                                    set_email(email.clone());
+
+                                    let err = Email(email).validate().err().map(|val| val.to_string());
                                     set_email_error(err);
                                 }
                             />
+                            {move || email_error().map(|err| view! {
+                                <p class="my-1 p-1 text-red-500">{err}</p>
+                            })}
                         </label>
 
                         <label class="block">
@@ -121,15 +158,21 @@ pub fn Authentication() -> impl IntoView {
                                 autocomplete="current-password"
 
                                 on:input=move |ev| {
-                                    let err = Password(event_target_value(&ev)).validate().err().map(|val| val.to_string());
+                                    let password = event_target_value(&ev);
+                                    set_password(password.clone());
+
+                                    let err = Password(password).validate().err().map(|val| val.to_string());
                                     set_password_error(err);
                                 }
                             />
+                            {move || password_error().map(|err| view! {
+                                <p class="my-1 p-1 text-red-500">{err}</p>
+                            })}
                         </label>
                     </div>
 
                     <SubmitButton value="Log In" disabled=disabled />
-                </ActionForm>
+                </form>
 
                 <OrBreak/>
                 <OAuth2Links/>
@@ -141,30 +184,4 @@ pub fn Authentication() -> impl IntoView {
             </div>
         </main>
     }
-}
-
-#[server]
-async fn authenticate(
-    email: String,
-    password: String,
-) -> Result<Result<AuthenticateResponse, AuthenticateClientError>, ServerFnError> {
-    use std::sync::Arc;
-
-    use backend::state::ServerState;
-    use garde::Unvalidated;
-
-    let state = expect_context::<Arc<ServerState>>();
-
-    let request = Unvalidated::new(AuthenticateRequest {
-        email: Email(email),
-        password: Password(password),
-    })
-    .validate()
-    .map_err(|_| ServerFnError::new("validation failed"))?;
-
-    Ok(
-        backend::routes::auth::authenticate::authenticate(state, request)
-            .await
-            .map_err(Into::into),
-    )
 }

@@ -8,15 +8,15 @@
         "*.rs": "html"
     },
 
-    "files.associations": {
-        "*.rs": "rust"
-    },
+    // "files.associations": {
+    //     "*.rs": "rust"
+    // },
 
-    "editor.quickSuggestions": {
-        "other": "on",
-        "comments": "on",
-        "strings": true
-    },
+    // "editor.quickSuggestions": {
+    //     "other": "on",
+    //     "comments": "on",
+    //     "strings": true
+    // },
 
     "css.validate": true,
     "rust-analyzer.cargo.features": [

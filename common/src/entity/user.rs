@@ -1,3 +1,5 @@
+use std::fmt;
+
 use garde::Validate;
 use serde::{Deserialize, Serialize};
 
@@ -13,9 +15,15 @@ pub const USER_AVATAR_SIZE: usize = 256;
 #[garde(transparent)]
 pub struct Email(#[garde(email)] pub String);
 
-#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Validate)]
+#[derive(Clone, PartialEq, Hash, Serialize, Deserialize, Validate)]
 #[garde(transparent)]
 pub struct Password(#[garde(length(min = 1, max = MAX_USER_PASSWORD_SIZE))] pub String);
+
+impl fmt::Debug for Password {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Password").finish()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Validate)]
 #[garde(transparent)]

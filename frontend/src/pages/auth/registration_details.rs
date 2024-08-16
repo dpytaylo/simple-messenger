@@ -171,27 +171,3 @@ async fn register(
         .await
         .map_err(|val| val.into()))
 }
-
-#[server]
-async fn test2(
-    name: String,
-) -> Result<Result<RegisterResponse, RegisterClientError>, ServerFnError> {
-    Ok(Ok(RegisterResponse {
-        token: "token".into(),
-    }))
-}
-
-pub enum TestError {
-    A,
-    B,
-}
-
-pub struct Test {
-    name: String,
-}
-
-// fn test_wrapper(input: Test) -> Result<Result<(), TestError>, ServerFnError> {}
-
-fn test(input: Test) -> Result<(), TestError> {
-    Ok(())
-}
