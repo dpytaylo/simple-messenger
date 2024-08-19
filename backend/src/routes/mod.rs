@@ -1,8 +1,16 @@
 use axum::{middleware, routing::get, Router};
-use common::routes::auth::authenticate::Authenticate;
+use common::routes::auth::{
+    authenticate::Authenticate,
+    registration::{
+        is_email_available::IsEmailAvailable, is_name_available::IsNameAvailable,
+        register::Register, register_data::RegisterData,
+    },
+};
 use rpc::server::RouterExt;
 
 use self::auth::authenticate;
+use self::auth::registration::{is_email_available, is_name_available};
+use self::auth::registration::{register, register_data};
 use crate::{authorization::mw_authorization, state::ServerStateWrapper};
 
 pub mod auth;
@@ -18,5 +26,10 @@ pub fn routes(state: ServerStateWrapper) -> Router<ServerStateWrapper> {
 }
 
 fn rpc_routes() -> Router<ServerStateWrapper> {
-    Router::new().route_rpc(Authenticate, authenticate::authenticate)
+    Router::new()
+        .route_rpc(IsEmailAvailable, is_email_available::is_email_available)
+        .route_rpc(IsNameAvailable, is_name_available::is_name_available)
+        .route_rpc(RegisterData, register_data::register_data)
+        .route_rpc(Register, register::register)
+        .route_rpc(Authenticate, authenticate::authenticate)
 }

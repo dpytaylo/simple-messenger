@@ -2,6 +2,13 @@ use rpc::{dto, procedure, request};
 
 use crate::entity::user::{Email, Password};
 
+procedure! {
+    name: "authenticate",
+    request: AuthenticateRequest,
+    response: AuthenticateResponse,
+    error: AuthenticateError,
+}
+
 #[request]
 pub struct AuthenticateRequest {
     #[garde(dive)]
@@ -20,11 +27,4 @@ pub struct AuthenticateResponse {
 pub enum AuthenticateError {
     InvalidCredentials,
     Other,
-}
-
-procedure! {
-    name: "authenticate",
-    request: AuthenticateRequest,
-    response: AuthenticateResponse,
-    error: AuthenticateError,
 }

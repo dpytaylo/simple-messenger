@@ -17,4 +17,12 @@ impl Query {
             .one(db)
             .await
     }
+
+    pub async fn is_name_available(db: &DbConn, name: &str) -> Result<bool, DbErr> {
+        User::find()
+            .filter(user::Column::Name.eq(name))
+            .one(db)
+            .await
+            .map(|user| !user.is_some())
+    }
 }

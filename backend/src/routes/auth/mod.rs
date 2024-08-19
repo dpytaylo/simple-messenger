@@ -1,9 +1,7 @@
 use anyhow::Context;
-use axum::{routing::post, Router};
+use axum::Router;
 use chrono::{Duration, Utc};
-use common::routes::auth::authenticate::Authenticate;
 use jsonwebtoken::{encode, Header};
-use rpc::server::RouterExt;
 
 use crate::{
     authorization::Claims,
@@ -12,13 +10,10 @@ use crate::{
 
 pub mod authenticate;
 pub mod oauth;
-pub mod register;
-pub mod register_data;
+pub mod registration;
 
 pub fn routes() -> Router<ServerStateWrapper> {
-    Router::new()
-        .nest("/oauth", oauth::routes())
-        .route("/register", post(register::register_route))
+    Router::new().nest("/oauth", oauth::routes())
 }
 
 pub fn generate_jwt_token(state: &ServerState, id: String) -> anyhow::Result<String> {

@@ -18,7 +18,6 @@ features = [
 ]
 
 [dev-dependencies]
-once_cell = "1.18.0"
 tokio = { workspace = true, features = ["macros", "rt"] }
 
 [features]

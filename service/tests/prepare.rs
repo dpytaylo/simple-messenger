@@ -1,11 +1,12 @@
+use std::sync::LazyLock;
+
 use ::entity::{sea_orm_active_enums::RegistrationType, user};
-use once_cell::sync::Lazy;
 use sea_orm::prelude::Uuid;
 
 pub const FIRST_UUID: Uuid = Uuid::from_u128(271933978467241048146062564402173984327);
 pub const SECOND_UUID: Uuid = Uuid::from_u128(265428574764778157879973183191968264095);
 
-pub static USER_MODEL: Lazy<user::Model> = Lazy::new(|| user::Model {
+pub static USER_MODEL: LazyLock<user::Model> = LazyLock::new(|| user::Model {
     id: FIRST_UUID,
     registration_type: RegistrationType::Email,
     email: "a@a.com".into(),

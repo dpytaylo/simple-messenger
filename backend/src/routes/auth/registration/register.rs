@@ -1,20 +1,17 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::{
-    extract::State,
-    response::{IntoResponse, Response},
-    Json,
-};
+use axum::extract::State;
 use common::{
     entity::user::{Email, Name},
-    routes::auth::register::{
-        RegisterClientError, RegisterRequest, RegisterResponse, RegistrationKind,
+    routes::auth::registration::register::{
+        RegisterError, RegisterRequest, RegisterResponse, RegistrationKind,
     },
 };
 use garde::Valid;
 use http::StatusCode;
 use rand_chacha::rand_core::OsRng;
+use rpc::server::error::{IntoProcFailure, ProcedureError};
 use scrypt::{
     password_hash::{PasswordHasher, SaltString},
     Scrypt,
@@ -23,13 +20,10 @@ use service::{
     mutation::{CreateUserData, Mutation},
     query::Query,
 };
-use strum::IntoStaticStr;
 use thiserror::Error;
+use tracing::instrument;
 
-use super::generate_jwt_token;
-use crate::{
-    error::wrap_error, extractors::jsonv::JsonV, state::ServerState, utils::dto_entity::ToEntity,
-};
+use crate::{routes::auth::generate_jwt_token, state::ServerState, utils::dto_entity::ToEntity};
 
 impl ToEntity<service::RegistrationKind> for RegistrationKind {
     fn to_entity(&self) -> service::RegistrationKind {
@@ -41,8 +35,8 @@ impl ToEntity<service::RegistrationKind> for RegistrationKind {
     }
 }
 
-#[derive(Debug, Error, IntoStaticStr)]
-pub enum RegisterError {
+#[derive(Debug, Error)]
+pub enum RegisterServerError {
     #[error("account with the same email already exists")]
     AccountWithSameEmailAlreadyExists,
 
@@ -53,35 +47,25 @@ pub enum RegisterError {
     Other(#[from] anyhow::Error),
 }
 
-impl IntoResponse for RegisterError {
-    fn into_response(self) -> Response {
-        let code = match self {
-            Self::NoPassword => StatusCode::BAD_REQUEST,
-            Self::AccountWithSameEmailAlreadyExists | RegisterError::Other(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
-        };
-
-        wrap_error(code, self)
-    }
-}
-
-impl Into<RegisterClientError> for RegisterError {
-    fn into(self) -> RegisterClientError {
+impl ProcedureError<RegisterError> for RegisterServerError {
+    fn into_procedure_error(self) -> impl IntoProcFailure<RegisterError> {
         match self {
             Self::AccountWithSameEmailAlreadyExists => {
-                RegisterClientError::AccountWithSameEmailAlreadyExists
+                RegisterError::AccountWithSameEmailAlreadyExists.into_proc_failure()
             }
-            Self::NoPassword => RegisterClientError::NoPassword,
-            Self::Other(_) => RegisterClientError::Other,
+            Self::NoPassword => {
+                (StatusCode::BAD_REQUEST, RegisterError::NoPassword).into_proc_failure()
+            }
+            Self::Other(_) => RegisterError::Other.into_proc_failure(),
         }
     }
 }
 
+#[instrument(skip(state), err)]
 pub async fn register(
-    state: Arc<ServerState>,
+    State(state): State<Arc<ServerState>>,
     request: Valid<RegisterRequest>,
-) -> Result<RegisterResponse, RegisterError> {
+) -> Result<RegisterResponse, RegisterServerError> {
     let RegisterRequest {
         kind,
         email: Email(email),
@@ -97,13 +81,13 @@ pub async fn register(
         .context("failed to find user by email")?
         .is_some()
     {
-        return Err(RegisterError::AccountWithSameEmailAlreadyExists);
+        return Err(RegisterServerError::AccountWithSameEmailAlreadyExists);
     }
 
     let mut user = match kind {
         RegistrationKind::Email => {
             let Some(password) = password else {
-                return Err(RegisterError::NoPassword)?;
+                return Err(RegisterServerError::NoPassword)?;
             };
 
             let salt = SaltString::generate(&mut OsRng);
@@ -142,11 +126,4 @@ pub async fn register(
 
     let token = generate_jwt_token(&state, user.id.take().unwrap().into())?;
     Ok(RegisterResponse { token })
-}
-
-pub async fn register_route(
-    State(state): State<Arc<ServerState>>,
-    JsonV(request): JsonV<RegisterRequest>,
-) -> Result<Json<RegisterResponse>, RegisterError> {
-    register(state, request).await.map(|val| Json(val))
 }

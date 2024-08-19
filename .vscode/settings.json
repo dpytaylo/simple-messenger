@@ -2,31 +2,12 @@
     "[rust]": {
         "editor.formatOnSave": true
     },
-
     "tailwindCSS.includeLanguages": {
         "rust": "html",
         "*.rs": "html"
     },
-
-    // "files.associations": {
-    //     "*.rs": "rust"
-    // },
-
-    // "editor.quickSuggestions": {
-    //     "other": "on",
-    //     "comments": "on",
-    //     "strings": true
-    // },
-
     "css.validate": true,
     "rust-analyzer.cargo.features": [
         "ssr"
-    ],
-
-//     "rust-analyzer.server.extraEnv": {  
-//         "CARGO_TARGET_DIR": "target/rust-analyzer"  
-//     },  
-//    "rust-analyzer.check.extraArgs": [  
-//         "--target-dir=target/rust-analyzer"  
-//     ]  
+    ]
 }

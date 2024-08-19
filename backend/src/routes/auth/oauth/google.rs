@@ -7,7 +7,7 @@ use axum::{
     routing::get,
     Router,
 };
-use common::routes::auth::register::RegistrationKind;
+use common::routes::auth::registration::register::RegistrationKind;
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, RedirectUrl, RevocationUrl, Scope, TokenResponse, TokenUrl,

@@ -33,6 +33,12 @@ async fn main() {
         .unwrap();
     assert_eq!(user.id, prepare::SECOND_UUID);
 
+    let is_available = Query::is_name_available(db, "a").await.unwrap();
+    assert_eq!(is_available, false);
+
+    let is_available = Query::is_name_available(db, "abc").await.unwrap();
+    assert_eq!(is_available, true);
+
     {
         let user = Mutation::create_user(
             db,
@@ -41,6 +47,7 @@ async fn main() {
                 email: "c@a.com".into(),
                 password: "password".into(),
                 name: "c".into(),
+                avatar: Some("https://example.com/avatar.png".into()),
             },
         )
         .await
@@ -51,6 +58,9 @@ async fn main() {
         assert_eq!(user.email, Unchanged("c@a.com".into()));
         assert_eq!(user.password, Unchanged("password".into()));
         assert_eq!(user.name, Unchanged("c".into()));
-        assert_eq!(user.avatar, Unchanged(None));
+        assert_eq!(
+            user.avatar,
+            Unchanged("https://example.com/avatar.png".into())
+        );
     }
 }

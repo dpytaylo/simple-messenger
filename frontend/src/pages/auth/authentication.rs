@@ -25,11 +25,6 @@ pub const AUTHENTICATION_PAGE_URL: &str = "authentication";
 
 #[component]
 pub fn Authentication() -> impl IntoView {
-    // let navigate = use_navigate();
-    // let alert = use_alert_message();
-    // let authorization = use_authorization();
-    // let rpc_client = use_rpc_client();
-
     let (email, set_email) = create_signal("".to_owned());
     let (password, set_password) = create_signal("".to_owned());
 
@@ -40,10 +35,6 @@ pub fn Authentication() -> impl IntoView {
     let (form_failed, set_form_failed) = create_signal(None);
 
     let authenticate = create_action(move |input: &AuthenticateRequest| {
-        // let navigate = navigate.clone();
-        // let alert = alert.clone();
-        // let authorization = authorization.clone();
-        // let rpc_client = rpc_client.clone();
         let input = input.clone();
 
         let navigate = use_navigate();
@@ -52,7 +43,7 @@ pub fn Authentication() -> impl IntoView {
         let rpc_client = use_rpc_client();
 
         async move {
-            let rpc_result = rpc_client.call::<Authenticate>(input).await;
+            let rpc_result = rpc_client.call::<Authenticate>(&input).await;
             let result = match rpc_result {
                 Ok(val) => val,
                 Err(err) => {
@@ -81,7 +72,7 @@ pub fn Authentication() -> impl IntoView {
                     }
                     AuthenticateError::Other => {
                         let description = format!("{err:?}");
-                        error!(title = "Authentication failed", description = description);
+                        error!(description = description, "Authentication failed");
 
                         alert.create(
                             "Authentication failed",

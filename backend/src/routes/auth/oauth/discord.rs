@@ -7,7 +7,9 @@ use axum::{
     routing::get,
     Router,
 };
-use common::{entity::user::USER_AVATAR_SIZE, routes::auth::register::RegistrationKind};
+use common::{
+    entity::user::USER_AVATAR_SIZE, routes::auth::registration::register::RegistrationKind,
+};
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, RedirectUrl, RevocationUrl, Scope, TokenResponse, TokenUrl,

@@ -1,16 +1,23 @@
-use garde::Validate;
+use rpc::{dto, procedure, request};
 use serde::{Deserialize, Serialize};
 
 use crate::entity::user::{Email, Name, Password};
 
-#[derive(Debug, Clone, PartialEq, Hash, Deserialize, Serialize)]
+procedure! {
+    name: "register",
+    request: RegisterRequest,
+    response: RegisterResponse,
+    error: RegisterError,
+}
+
+#[derive(Clone, Debug, PartialEq, Hash, Deserialize, Serialize)]
 pub enum RegistrationKind {
     Email,
     Discord,
     Google,
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Deserialize, Serialize, Validate)]
+#[request]
 pub struct RegisterRequest {
     #[garde(skip)]
     pub kind: RegistrationKind,
@@ -42,13 +49,13 @@ fn is_email_kind(
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Deserialize, Serialize)]
+#[dto]
 pub struct RegisterResponse {
     pub token: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Deserialize, Serialize)]
-pub enum RegisterClientError {
+#[dto]
+pub enum RegisterError {
     AccountWithSameEmailAlreadyExists,
     NoPassword,
     Other,
