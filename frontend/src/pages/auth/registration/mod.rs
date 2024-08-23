@@ -22,7 +22,7 @@ mod summary;
 
 pub const REGISTRATION_PAGE_URL: &str = "/registration";
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum RegistrationStep {
     Email,
     Details,
@@ -101,41 +101,69 @@ pub fn Registration() -> impl IntoView {
 
     let next_step = move || set_step.update(|val| *val = val.clone().next());
 
-    let inner = move || match step() {
-        RegistrationStep::Email => {
-            view! {
-                <EmailPage next_step set_email />
-            }
-        }
-        RegistrationStep::Details => {
-            view! {
-                <Details next_step set_name />
-            }
-        }
-        RegistrationStep::Password => {
-            view! {
-                <PasswordPage next_step set_password />
-            }
-        }
-        RegistrationStep::Summary => {
-            view! {
-                <Summary
-                    next_step
-                    email=email.get_untracked().unwrap()
-                    name=name.get_untracked().unwrap()
-                    password=password.get_untracked().unwrap()
-                />
-            }
-        }
-        RegistrationStep::End => todo!(),
-    };
+    // let inner = move || match step() {
+    //     RegistrationStep::Email => {
+    //         view! {
+    //             <EmailPage next_step set_email />
+    //         }
+    //     }
+    //     RegistrationStep::Details => {
+    //         view! {
+    //             <Details next_step set_name />
+    //         }
+    //     }
+    //     RegistrationStep::Password => {
+    //         view! {
+    //             <PasswordPage next_step set_password />
+    //         }
+    //     }
+    //     RegistrationStep::Summary => {
+    //         view! {
+    //             <Summary
+    //                 next_step
+    //                 email=email.get_untracked().unwrap()
+    //                 name=name.get_untracked().unwrap()
+    //                 password=password.get_untracked().unwrap()
+    //             />
+    //         }
+    //     }
+    //     RegistrationStep::End => todo!(),
+    // };
+
+    // absolute left-1/2 top-2/5 -translate-x-1/2 -translate-y-2/5
 
     view! {
-        <main class="
-            absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-            max-w-xs w-full 
-        ">
-            {inner}
-        </main>
+        <div class="pt-44 w-full h-lvh bg-slate-100">
+            <div class="
+                mx-auto max-w-screen-lg w-full p-12 rounded-xl bg-white
+            ">
+                // {inner}
+                <Show
+                    when=move || step() == RegistrationStep::Email
+                >
+                    <EmailPage next_step set_email />
+                </Show>
+                <Show
+                    when=move || step() == RegistrationStep::Details
+                >
+                    <Details next_step set_name />
+                </Show>
+                <Show
+                    when=move || step() == RegistrationStep::Password
+                >
+                    <PasswordPage next_step set_password />
+                </Show>
+                <Show
+                    when=move || step() == RegistrationStep::Summary
+                >
+                    <Summary
+                        next_step
+                        email=email.get_untracked().unwrap()
+                        name=name.get_untracked().unwrap()
+                        password=password.get_untracked().unwrap()
+                    />
+                </Show>
+            </div>
+        </div>
     }
 }
