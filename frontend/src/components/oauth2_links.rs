@@ -1,9 +1,13 @@
 use leptos::*;
 
 #[component]
-pub fn OAuth2Links() -> impl IntoView {
+pub fn OAuth2Links(
+    #[prop(default = MaybeSignal::Static(Default::default()), into)] class: MaybeSignal<String>,
+) -> impl IntoView {
+    let class = move || format!("flex flex-row justify-start gap-3 {}", class());
+
     view! {
-        <div class="flex flex-row justify-center gap-3">
+        <div class=class>
             <a href="/api/auth/oauth/google" rel="external">
                 <img class="w-10 h-10 p-1 hover:bg-slate-100 rounded" src="/assets/google_logo.svg" />
             </a>

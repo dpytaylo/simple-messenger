@@ -2,24 +2,26 @@ use common::{
     entity::user::Email,
     routes::auth::registration::is_email_available::{IsEmailAvailable, IsEmailAvailableRequest},
 };
-use ev::SubmitEvent;
-use garde::Validate;
+use garde::Unvalidated;
 use leptos::*;
-use leptos_router::A;
+use rpc::Validate;
 use tracing::error;
 
 use crate::{
-    atoms::{button::Button, submit_button::SubmitButton},
+    atoms::{
+        anchor::Anchor,
+        button::{Button, ButtonKind},
+    },
     components::{
         alert_message::{use_alert_message, MessageVariant},
         oauth2_links::OAuth2Links,
-        or_break::OrBreak,
     },
+    pages::auth::authentication::AUTHENTICATION_PAGE_URL,
     utils::{error::log_rpc_error, rpc_provider::use_rpc_client},
 };
 
 #[component]
-pub fn EmailPage<F>(next_step: F, set_email: WriteSignal<Option<Email>>) -> impl IntoView
+pub fn EmailPage<F>(next_step: F, email: RwSignal<Option<Email>>) -> impl IntoView
 where
     F: Fn() + Clone + 'static,
 {
@@ -39,14 +41,22 @@ where
 
     let is_email_available_value = is_email_available.value();
 
-    let on_submit = move |ev: SubmitEvent| {
-        ev.prevent_default();
+    let on_continue = move |_| {
+        let email_value = email_node.get().unwrap().value();
 
-        let request = IsEmailAvailableRequest {
-            email: Email(email_node.get().unwrap().value()),
+        let email_value = match Unvalidated::new(Email(email_value)).validate() {
+            Ok(val) => val,
+            Err(err) => {
+                set_email_error(Some(err.to_string()));
+                return;
+            }
         };
 
-        set_email(Some(request.email.clone()));
+        email.set(Some(email_value.clone().into_inner()));
+        let request = IsEmailAvailableRequest {
+            email: email_value.into_inner(),
+        };
+
         is_email_available.dispatch(request);
     };
 
@@ -85,45 +95,61 @@ where
     });
 
     view! {
-        <div class="mb-5 p-10 border rounded-xl shadow-md">
-            <p class="mb-5 text-xl text-center">"Create a new account"</p>
-            <form on:submit=on_submit>
-                <div class="mb-5 space-y-4">
-                    <label class="block">
-                        <p class="mb-1 text-sm">"Email"</p>
-                        <input
-                            class="h-8 px-2 py-1 w-full border border-gray-400 rounded-md text-sm"
-                            class=("border-2", move || email_error().is_some())
-                            class=("border-red-500", move || email_error().is_some())
+        <div class="w-full lg:h-lvh bg-white lg:bg-slate-100">
+            <div class="mx-auto mt-20 lg:mt-0 mb-20 lg:relative lg:top-9/20 lg:-translate-y-1/2 max-w-screen-lg w-full px-4 sm:px-12 lg:py-16 rounded-xl bg-white">
+                <div class="lg:grid lg:grid-cols-2 lg:gap-x-12">
+                    <div>
+                        <p class="text-4xl lg:text-5xl">"Create a new account"</p>
+                        <p class="mt-4">"Register via email or one of the supported OAuth2 services."</p>
+                    </div>
+                    <div class="mt-10 lg:mt-0">
+                        <div class="space-y-4">
+                            <label class="block">
+                                <p>"Via email"</p>
+                                <input
+                                    class="mt-1 h-11 px-2 py-1 w-full border border-gray-400 rounded-md"
+                                    class=("border-2", move || email_error().is_some())
+                                    class=("border-red-500", move || email_error().is_some())
 
-                            type="text"
-                            name="email"
-                            required=true
-                            placeholder="your email"
-                            autocomplete="email"
+                                    type="text"
+                                    name="email"
+                                    required=true
+                                    placeholder="your email"
+                                    autocomplete="email"
 
-                            on:input=move |ev| {
-                                let err = Email(event_target_value(&ev)).validate().err().map(|val| val.to_string());
-                                set_email_error(err);
-                            }
+                                    attr:value=email.get_untracked().map(|val| val.0).unwrap_or_default()
 
-                            node_ref=email_node
-                        />
-                        {move || email_error().map(|err| view! {
-                            <p class="my-1 p-1 text-red-500">{err}</p>
-                        })}
-                    </label>
+                                    on:input=move |ev| {
+                                        let err = Email(event_target_value(&ev)).validate().err().map(|val| val.to_string());
+                                        set_email_error(err);
+                                    }
+
+                                    node_ref=email_node
+                                />
+                                <p class="my-1 p-1 h-8 text-red-500 text-sm">
+                                    {email_error}
+                                </p>
+                            </label>
+                        </div>
+
+                        <p class="mt-1">"Via OAuth2 services"</p>
+                        <OAuth2Links class="mt-1" />
+                    </div>
                 </div>
-
-                <SubmitButton value="Next" disabled=disabled />
-            </form>
-
-            <OrBreak/>
-            <OAuth2Links/>
-        </div>
-
-        <div class="px-10 py-5 border rounded-xl shadow-md text-center">
-            "Already registered? "<A href="/authentication" class="text-blue-500 hover:text-blue-300">"Log in."</A>
+                <div class="mt-16 sm:mt-32 flex flex-col-reverse min-[500px]:flex-row min-[500px]:justify-between">
+                    <div class="mt-4 min-[500px]:mt-0 flex flex-col items-stretch text-center">
+                        <Anchor href=AUTHENTICATION_PAGE_URL>"I have already an account"</Anchor>
+                    </div>
+                    <Button
+                        kind=ButtonKind::Primary
+                        disabled=disabled
+                        class="mt-4 min-[500px]:mt-0 w-full min-[500px]:w-28 h-12 min-[500px]:h-10"
+                        on:click=on_continue
+                    >
+                        "Continue"
+                    </Button>
+                </div>
+            </div>
         </div>
     }
 }

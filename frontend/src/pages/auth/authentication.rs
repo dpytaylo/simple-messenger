@@ -21,7 +21,7 @@ use crate::{
     utils::{authorization::use_authorization, error::log_rpc_error, rpc_provider::use_rpc_client},
 };
 
-pub const AUTHENTICATION_PAGE_URL: &str = "authentication";
+pub const AUTHENTICATION_PAGE_URL: &str = "/authentication";
 
 #[component]
 pub fn Authentication() -> impl IntoView {

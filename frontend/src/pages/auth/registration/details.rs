@@ -2,21 +2,21 @@ use common::{
     entity::user::Name,
     routes::auth::registration::is_name_available::{IsNameAvailable, IsNameAvailableRequest},
 };
-use ev::SubmitEvent;
-use garde::Validate;
+use garde::{Unvalidated, Validate};
 use leptos::*;
 use tracing::error;
 
 use crate::{
-    atoms::submit_button::SubmitButton,
+    atoms::button::{Button, ButtonKind},
     components::alert_message::{use_alert_message, MessageVariant},
     utils::{error::log_rpc_error, rpc_provider::use_rpc_client},
 };
 
 #[component]
-pub fn Details<F>(next_step: F, set_name: WriteSignal<Option<Name>>) -> impl IntoView
+pub fn Details<BF, NF>(back_step: BF, next_step: NF, name: RwSignal<Option<Name>>) -> impl IntoView
 where
-    F: Fn() + Clone + 'static,
+    BF: Fn() + 'static,
+    NF: Fn() + 'static,
 {
     let alert = use_alert_message();
     let name_node: NodeRef<html::Input> = create_node_ref();
@@ -33,14 +33,22 @@ where
 
     let is_name_available_value = is_name_available.value();
 
-    let on_submit = move |ev: SubmitEvent| {
-        ev.prevent_default();
+    let on_continue = move |_| {
+        let name_value = name_node.get().unwrap().value();
 
-        let request = IsNameAvailableRequest {
-            name: Name(name_node.get().unwrap().value()),
+        let name_value = match Unvalidated::new(Name(name_value)).validate() {
+            Ok(val) => val,
+            Err(err) => {
+                set_name_error(Some(err.to_string()));
+                return;
+            }
         };
 
-        set_name(Some(request.name.clone()));
+        name.set(Some(name_value.clone().into_inner()));
+        let request = IsNameAvailableRequest {
+            name: name_value.into_inner(),
+        };
+
         is_name_available.dispatch(request);
     };
 
@@ -79,36 +87,60 @@ where
     });
 
     view! {
-        <div class="mb-5 p-10 border rounded-xl shadow-md">
-            <p class="mb-5 text-xl text-center">"Details"</p>
-            <form on:submit=on_submit>
-                <div class="mb-5 space-y-4 text-sm">
-                    <label class="block">
-                        <p class="mb-1 text-sm">"Name"</p>
-                        <input
-                            class="h-8 px-2 py-1 w-full border border-gray-400 rounded-md text-sm"
-                            class=("border-2", move || name_error().is_some())
-                            class=("border-red-500", move || name_error().is_some())
+        <div class="w-full lg:h-lvh bg-white lg:bg-slate-100">
+            <div class="mx-auto mt-20 lg:mt-0 mb-20 lg:relative lg:top-9/20 lg:-translate-y-1/2 max-w-screen-lg w-full px-4 sm:px-12 lg:py-16 rounded-xl bg-white">
+                <div class="lg:grid lg:grid-cols-2 lg:gap-x-12">
+                    <div>
+                        <p class="text-4xl lg:text-5xl">"Choose a nickname"</p>
+                        <p class="mt-4">"Your friend can find you via your nickname."</p>
+                        <p class="mt-2">"You will be able to change it later in the settings."</p>
+                    </div>
+                    <div class="mt-10 lg:mt-0 space-y-4">
+                        <label class="block">
+                            <p>"Nickname"</p>
+                            <input
+                                class="mt-1 h-11 px-2 py-1 w-full border border-gray-400 rounded-md"
+                                class=("border-2", move || name_error().is_some())
+                                class=("border-red-500", move || name_error().is_some())
 
-                            type="text"
-                            name="name"
-                            required=true
-                            placeholder="your name"
+                                type="text"
+                                name="name"
+                                required=true
+                                placeholder="your nickname"
 
-                            on:input=move |ev| {
-                                set_name_error(Name(event_target_value(&ev)).validate().err().map(|vaL| vaL.to_string()));
-                            }
+                                attr:value=name.get_untracked().map(|val| val.0).unwrap_or_default()
 
-                            _ref = name_node
-                        />
-                        {move || name_error().map(|err| view! {
-                            <p class="my-1 p-1 text-red-500">{err}</p>
-                        })}
-                    </label>
+                                on:input=move |ev| {
+                                    set_name_error(Name(event_target_value(&ev)).validate().err().map(|vaL| vaL.to_string()));
+                                }
+
+                                _ref = name_node
+                            />
+                            <p class="my-1 p-1 h-8 text-red-500 text-sm">
+                                {name_error}
+                            </p>
+                        </label>
+                    </div>
                 </div>
 
-                <SubmitButton value="Finish" disabled=disabled />
-            </form>
+                <div class="mt-16 sm:mt-32 flex flex-col-reverse items-stretch min-[500px]:flex-row min-[500px]:justify-between">
+                    <Button
+                        kind=ButtonKind::Secondary
+                        class="mt-4 min-[500px]:mt-0 w-full min-[500px]:w-28 h-12 min-[500px]:h-10"
+                        on:click=move |_| back_step()
+                    >
+                        "Return back"
+                    </Button>
+                    <Button
+                        kind=ButtonKind::Primary
+                        disabled=disabled
+                        class="w-full min-[500px]:w-28 h-12 min-[500px]:h-10"
+                        on:click=on_continue
+                    >
+                        "Continue"
+                    </Button>
+                </div>
+            </div>
         </div>
     }
 }

@@ -12,7 +12,8 @@ module.exports = {
       },
       spacing: {
         "2/5": "40%",
-      }
+        "9/20": "45%",
+      },
     },
   },
   plugins: [],

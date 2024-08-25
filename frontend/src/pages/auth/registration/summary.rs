@@ -1,41 +1,46 @@
 use common::entity::user::{Email, Name, Password};
-use ev::SubmitEvent;
 use leptos::*;
 
-use crate::atoms::submit_button::SubmitButton;
+use crate::atoms::button::{Button, ButtonKind};
 
 #[component]
-pub fn Summary<F>(next_step: F, email: Email, password: Password, name: Name) -> impl IntoView
+pub fn Summary<BF, NF>(
+    back_step: BF,
+    next_step: NF,
+    email: Email,
+    password: Password,
+    name: Name,
+) -> impl IntoView
 where
-    F: Fn() + 'static,
+    BF: Fn() + 'static,
+    NF: Fn() + 'static,
 {
-    let on_submit = move |ev: SubmitEvent| {
-        ev.prevent_default();
+    let on_submit = move |_| {
         next_step();
     };
 
     view! {
-        <main class="
-            absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-            max-w-xs w-full 
-        ">
-            <div class="mb-5 p-10 border rounded-xl shadow-md">
-                <p class="mb-5 text-xl text-center">"Create a new account"</p>
-                <form on:submit=on_submit>
-                    <div class="mb-5 space-y-4">
+        <div class="w-full lg:h-lvh bg-white lg:bg-slate-100">
+            <div class="mx-auto mt-20 lg:mt-0 mb-20 lg:relative lg:top-9/20 lg:-translate-y-1/2 max-w-screen-lg w-full px-4 sm:px-12 lg:py-16 rounded-xl bg-white">
+                <div class="lg:grid lg:grid-cols-2 lg:gap-x-12">
+                    <div>
+                        <p class="text-4xl lg:text-5xl">"Let’s summarize"</p>
+                        <p class="mt-4">"Double check your data before finish."</p>
+                    </div>
+                    <div class="mt-10 lg:mt-0 space-y-4">
                         <label class="block">
-                            <p class="mb-1 text-sm">"Email"</p>
+                            <p>"Email"</p>
                             <input
-                                class="h-8 px-2 py-1 w-full border border-gray-400 rounded-md text-sm"
+                                class="mt-1 h-11 px-2 py-1 w-full border border-gray-400 rounded-md"
                                 readonly=true
                                 prop:value=email.0
                             />
                         </label>
 
                         <label class="block">
-                            <p class="mb-1 text-sm">"Password"</p>
+                            <p>"Password"</p>
                             <input
-                                class="h-8 px-2 py-1 w-full border border-gray-400 rounded-md text-sm"
+                                class="mt-1 h-11 px-2 py-1 w-full border border-gray-400 rounded-md"
                                 readonly=true
                                 type="password"
                                 prop:value=password.0
@@ -43,18 +48,33 @@ where
                         </label>
 
                         <label class="block">
-                            <p class="mb-1 text-sm">"Name"</p>
+                            <p>"Name"</p>
                             <input
-                                class="px-2 py-1 w-full border border-gray-400 rounded-md text-sm"
+                                class="mt-1 h-11 px-2 py-1 w-full border border-gray-400 rounded-md"
                                 readonly=true
                                 prop:value=name.0
                             />
                         </label>
                     </div>
+                </div>
 
-                    <SubmitButton value="Register" />
-                </form>
+                <div class="mt-16 sm:mt-32 flex flex-col-reverse items-stretch min-[500px]:flex-row min-[500px]:justify-between">
+                    <Button
+                        kind=ButtonKind::Secondary
+                        class="mt-4 min-[500px]:mt-0 w-full min-[500px]:w-28 h-12 min-[500px]:h-10"
+                        on:click=move |_| back_step()
+                    >
+                        "Return back"
+                    </Button>
+                    <Button
+                        kind=ButtonKind::Primary
+                        class="w-full min-[500px]:w-28 h-12 min-[500px]:h-10"
+                        on:click=on_submit
+                    >
+                        "Register"
+                    </Button>
+                </div>
             </div>
-        </main>
+        </div>
     }
 }

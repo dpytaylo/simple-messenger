@@ -25,18 +25,28 @@ pub const REGISTRATION_PAGE_URL: &str = "/registration";
 #[derive(Debug, Clone, PartialEq)]
 enum RegistrationStep {
     Email,
-    Details,
     Password,
+    Details,
     Summary,
     End,
 }
 
 impl RegistrationStep {
+    fn back(self) -> Self {
+        match self {
+            Self::Email => panic!("RegisterStep::back() called on RegisterStep::Email"),
+            Self::Password => Self::Email,
+            Self::Details => Self::Password,
+            Self::Summary => Self::Details,
+            Self::End => Self::Summary,
+        }
+    }
+
     fn next(self) -> Self {
         match self {
-            Self::Email => Self::Details,
-            Self::Details => Self::Password,
-            Self::Password => Self::Summary,
+            Self::Email => Self::Password,
+            Self::Password => Self::Details,
+            Self::Details => Self::Summary,
             Self::Summary => Self::End,
             Self::End => panic!("RegisterStep::next() called on RegisterStep::End"),
         }
@@ -47,9 +57,9 @@ impl RegistrationStep {
 pub fn Registration() -> impl IntoView {
     let (step, set_step) = create_signal(RegistrationStep::Email);
 
-    let (email, set_email) = create_signal(None);
-    let (password, set_password) = create_signal(None);
-    let (name, set_name) = create_signal(None);
+    let email = create_rw_signal(None);
+    let password = create_rw_signal(None);
+    let name = create_rw_signal(None);
 
     let register = create_action(move |input: &RegisterRequest| {
         let input = input.clone();
@@ -99,71 +109,35 @@ pub fn Registration() -> impl IntoView {
         }
     });
 
+    let back_step = move || set_step.update(|val| *val = val.clone().back());
     let next_step = move || set_step.update(|val| *val = val.clone().next());
 
-    // let inner = move || match step() {
-    //     RegistrationStep::Email => {
-    //         view! {
-    //             <EmailPage next_step set_email />
-    //         }
-    //     }
-    //     RegistrationStep::Details => {
-    //         view! {
-    //             <Details next_step set_name />
-    //         }
-    //     }
-    //     RegistrationStep::Password => {
-    //         view! {
-    //             <PasswordPage next_step set_password />
-    //         }
-    //     }
-    //     RegistrationStep::Summary => {
-    //         view! {
-    //             <Summary
-    //                 next_step
-    //                 email=email.get_untracked().unwrap()
-    //                 name=name.get_untracked().unwrap()
-    //                 password=password.get_untracked().unwrap()
-    //             />
-    //         }
-    //     }
-    //     RegistrationStep::End => todo!(),
-    // };
-
-    // absolute left-1/2 top-2/5 -translate-x-1/2 -translate-y-2/5
-
     view! {
-        <div class="pt-44 w-full h-lvh bg-slate-100">
-            <div class="
-                mx-auto max-w-screen-lg w-full p-12 rounded-xl bg-white
-            ">
-                // {inner}
-                <Show
-                    when=move || step() == RegistrationStep::Email
-                >
-                    <EmailPage next_step set_email />
-                </Show>
-                <Show
-                    when=move || step() == RegistrationStep::Details
-                >
-                    <Details next_step set_name />
-                </Show>
-                <Show
-                    when=move || step() == RegistrationStep::Password
-                >
-                    <PasswordPage next_step set_password />
-                </Show>
-                <Show
-                    when=move || step() == RegistrationStep::Summary
-                >
-                    <Summary
-                        next_step
-                        email=email.get_untracked().unwrap()
-                        name=name.get_untracked().unwrap()
-                        password=password.get_untracked().unwrap()
-                    />
-                </Show>
-            </div>
-        </div>
+        <Show
+            when=move || step() == RegistrationStep::Email
+        >
+            <EmailPage next_step email />
+        </Show>
+        <Show
+            when=move || step() == RegistrationStep::Password
+        >
+            <PasswordPage back_step next_step password />
+        </Show>
+        <Show
+            when=move || step() == RegistrationStep::Details
+        >
+            <Details back_step next_step name />
+        </Show>
+        <Show
+            when=move || step() == RegistrationStep::Summary
+        >
+            <Summary
+                back_step
+                next_step
+                email=email.get_untracked().unwrap()
+                name=name.get_untracked().unwrap()
+                password=password.get_untracked().unwrap()
+            />
+        </Show>
     }
 }
