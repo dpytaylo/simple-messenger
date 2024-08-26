@@ -1,4 +1,3 @@
-pub mod authentication;
-pub mod form_failed;
 pub mod registration;
+pub mod sign_in;
 pub mod success;

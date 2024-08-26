@@ -13,13 +13,30 @@ use crate::{
 };
 
 #[component]
-pub fn Details<BF, NF>(back_step: BF, next_step: NF, name: RwSignal<Option<Name>>) -> impl IntoView
+pub fn Details<NF>(
+    #[prop(optional)] back_step: Option<Box<dyn Fn()>>,
+    next_step: NF,
+    name: RwSignal<Option<Name>>,
+) -> impl IntoView
 where
-    BF: Fn() + 'static,
     NF: Fn() + 'static,
 {
     let alert = use_alert_message();
     let name_node: NodeRef<html::Input> = create_node_ref();
+
+    let back_button = match back_step {
+        Some(back_step) => view! {
+            <Button
+                kind=ButtonKind::Secondary
+                class="mt-4 min-[500px]:mt-0 w-full min-[500px]:w-28 h-12 min-[500px]:h-10"
+                on:click=move |_| back_step()
+            >
+                "Return back"
+            </Button>
+        }
+        .into_view(),
+        None => view! { <div /> }.into_view(),
+    };
 
     let (name_error, set_name_error) = create_signal(None);
     let disabled = Signal::derive(move || name_error().is_some());
@@ -88,14 +105,14 @@ where
 
     view! {
         <div class="w-full lg:h-lvh bg-white lg:bg-slate-100">
-            <div class="mx-auto mt-20 lg:mt-0 mb-20 lg:relative lg:top-9/20 lg:-translate-y-1/2 max-w-screen-lg w-full px-4 sm:px-12 lg:py-16 rounded-xl bg-white">
+            <div class="mx-auto mt-20 lg:mt-0 lg:mb-20 lg:relative lg:top-9/20 lg:-translate-y-1/2 max-w-screen-lg w-full px-4 sm:px-12 lg:py-16 rounded-xl bg-white">
                 <div class="lg:grid lg:grid-cols-2 lg:gap-x-12">
                     <div>
                         <p class="text-4xl lg:text-5xl">"Choose a nickname"</p>
                         <p class="mt-4">"Your friend can find you via your nickname."</p>
                         <p class="mt-2">"You will be able to change it later in the settings."</p>
                     </div>
-                    <div class="mt-10 lg:mt-0 space-y-4">
+                    <div class="mt-10 lg:mt-0">
                         <label class="block">
                             <p>"Nickname"</p>
                             <input
@@ -124,13 +141,7 @@ where
                 </div>
 
                 <div class="mt-16 sm:mt-32 flex flex-col-reverse items-stretch min-[500px]:flex-row min-[500px]:justify-between">
-                    <Button
-                        kind=ButtonKind::Secondary
-                        class="mt-4 min-[500px]:mt-0 w-full min-[500px]:w-28 h-12 min-[500px]:h-10"
-                        on:click=move |_| back_step()
-                    >
-                        "Return back"
-                    </Button>
+                    {back_button}
                     <Button
                         kind=ButtonKind::Primary
                         disabled=disabled

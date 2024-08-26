@@ -1,16 +1,10 @@
-use common::entity::user::{Email, Name, Password};
+use common::entity::user::Name;
 use leptos::*;
 
 use crate::atoms::button::{Button, ButtonKind};
 
 #[component]
-pub fn Summary<BF, NF>(
-    back_step: BF,
-    next_step: NF,
-    email: Email,
-    password: Password,
-    name: Name,
-) -> impl IntoView
+pub fn SummaryOAuth2<BF, NF>(back_step: BF, next_step: NF, name: Name) -> impl IntoView
 where
     BF: Fn() + 'static,
     NF: Fn() + 'static,
@@ -28,25 +22,6 @@ where
                         <p class="mt-4">"Double check your data before finish."</p>
                     </div>
                     <div class="mt-10 lg:mt-0 space-y-4">
-                        <label class="block">
-                            <p>"Email"</p>
-                            <input
-                                class="mt-1 h-11 px-2 py-1 w-full border border-gray-400 rounded-md"
-                                readonly=true
-                                prop:value=email.0
-                            />
-                        </label>
-
-                        <label class="block">
-                            <p>"Password"</p>
-                            <input
-                                class="mt-1 h-11 px-2 py-1 w-full border border-gray-400 rounded-md"
-                                readonly=true
-                                type="password"
-                                prop:value=password.0
-                            />
-                        </label>
-
                         <label class="block">
                             <p>"Name"</p>
                             <input

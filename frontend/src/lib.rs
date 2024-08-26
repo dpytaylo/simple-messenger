@@ -4,14 +4,18 @@ use leptos_router::{Route, Routes};
 use pages::{
     app::{App, APP_PAGE_URL},
     auth::{
-        authentication::AUTHENTICATION_PAGE_URL, registration::REGISTRATION_PAGE_URL,
-        success::AUTH_SUCCESS_PAGE_URL,
+        registration::{
+            oauth2::{SignUpOAuth2, SIGN_UP_OAUTH2_PAGE_URL},
+            sign_up::SIGN_UP_PAGE_URL,
+        },
+        sign_in::SIGN_IN_PAGE_URL,
+        success::{AuthSuccess, AUTH_SUCCESS_PAGE_URL},
     },
 };
 use utils::{authorization::provide_authorization, rpc_provider::provide_rpc_client};
 
 use crate::{
-    pages::auth::{authentication::Authentication, registration::Registration},
+    pages::auth::{registration::sign_up::SignUp, sign_in::SignIn},
     pages::root::Root,
 };
 
@@ -32,10 +36,11 @@ pub fn Frontend() -> impl IntoView {
             <AlertMessageProvider/>
             <Routes>
                 <Route path="" view=Root />
-                <Route path=AUTHENTICATION_PAGE_URL view=Authentication />
-                <Route path=REGISTRATION_PAGE_URL view=Registration />
+                <Route path=SIGN_IN_PAGE_URL view=SignIn />
+                <Route path=SIGN_UP_PAGE_URL view=SignUp />
+                <Route path=SIGN_UP_OAUTH2_PAGE_URL view=SignUpOAuth2 />
                 <Route path=APP_PAGE_URL view=App />
-                <Route path=AUTH_SUCCESS_PAGE_URL view=App />
+                <Route path=AUTH_SUCCESS_PAGE_URL view=AuthSuccess />
             </Routes>
         </div>
     }

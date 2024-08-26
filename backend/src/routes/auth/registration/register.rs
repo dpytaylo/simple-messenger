@@ -3,10 +3,11 @@ use std::sync::Arc;
 use anyhow::Context;
 use axum::extract::State;
 use common::{
-    entity::user::{Email, Name},
-    routes::auth::registration::register::{
-        RegisterError, RegisterRequest, RegisterResponse, RegistrationKind,
+    entity::{
+        registration_kind::RegistrationKind,
+        user::{Email, Name},
     },
+    routes::auth::registration::register::{RegisterError, RegisterRequest, RegisterResponse},
 };
 use garde::Valid;
 use http::StatusCode;
@@ -67,14 +68,11 @@ pub async fn register(
     request: Valid<RegisterRequest>,
 ) -> Result<RegisterResponse, RegisterServerError> {
     let RegisterRequest {
-        kind,
         email: Email(email),
         password,
         name: Name(name),
         avatar,
     } = request.into_inner();
-
-    let password = password.map(|val| val.0);
 
     if Query::find_user_by_email(&state.db, &email)
         .await
@@ -84,45 +82,25 @@ pub async fn register(
         return Err(RegisterServerError::AccountWithSameEmailAlreadyExists);
     }
 
-    let mut user = match kind {
-        RegistrationKind::Email => {
-            let Some(password) = password else {
-                return Err(RegisterServerError::NoPassword)?;
-            };
+    let salt = SaltString::generate(&mut OsRng);
 
-            let salt = SaltString::generate(&mut OsRng);
+    let password_hash = Scrypt
+        .hash_password(password.0.as_bytes(), &salt)
+        .context("failed to hash password")?
+        .to_string();
 
-            let password_hash = Scrypt
-                .hash_password(password.as_bytes(), &salt)
-                .context("failed to hash password")?
-                .to_string();
-
-            Mutation::create_user(
-                &state.db,
-                CreateUserData {
-                    kind: kind.to_entity(),
-                    email,
-                    password: Some(password_hash),
-                    name,
-                    avatar,
-                },
-            )
-            .await
-            .context("failed to create user")?
-        }
-        RegistrationKind::Discord | RegistrationKind::Google => Mutation::create_user(
-            &state.db,
-            CreateUserData {
-                kind: kind.to_entity(),
-                email,
-                password: None,
-                name,
-                avatar,
-            },
-        )
-        .await
-        .context("failed to create user")?,
-    };
+    let mut user = Mutation::create_user(
+        &state.db,
+        CreateUserData {
+            kind: RegistrationKind::Email.to_entity(),
+            email,
+            password: Some(password_hash),
+            name,
+            avatar,
+        },
+    )
+    .await
+    .context("failed to create user")?;
 
     let token = generate_jwt_token(&state, user.id.take().unwrap().into())?;
     Ok(RegisterResponse { token })

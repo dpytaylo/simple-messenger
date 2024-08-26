@@ -43,13 +43,13 @@ where
 
     view! {
         <div class="w-full lg:h-lvh bg-white lg:bg-slate-100">
-            <div class="mx-auto mt-20 lg:mt-0 mb-20 lg:relative lg:top-9/20 lg:-translate-y-1/2 max-w-screen-lg w-full px-4 sm:px-12 lg:py-16 rounded-xl bg-white">
+            <div class="mx-auto mt-20 lg:mt-0 lg:mb-20 lg:relative lg:top-9/20 lg:-translate-y-1/2 max-w-screen-lg w-full px-4 sm:px-12 lg:py-16 rounded-xl bg-white">
                 <div class="lg:grid lg:grid-cols-2 lg:gap-x-12">
                     <div>
-                        <p class="text-4xl lg:text-5xl">"Create a new account"</p>
-                        <p class="mt-4">"Register via email or one of the supported OAuth2 services."</p>
+                        <p class="text-4xl lg:text-5xl">"Create a strong password"</p>
+                        <p class="mt-4">"For example, "<span class="font-mono">"`qwerty123`"</span>" is not a very good choice."</p>
                     </div>
-                    <div class="mt-10 lg:mt-0 space-y-4">
+                    <div class="mt-10 lg:mt-0">
                         <label class="block">
                             <p>"Password"</p>
                             <input

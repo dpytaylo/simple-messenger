@@ -3,7 +3,6 @@ use std::{ops::Deref, rc::Rc, time::Duration};
 use html::ElementDescriptor;
 use leptos::*;
 use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
-use tracing::info;
 
 use crate::utils::next_frame::use_next_frame;
 
@@ -135,8 +134,6 @@ where
 
         create_render_effect(move |prev: Option<bool>| {
             let show = show();
-
-            info!("prev = {:?}; show = {}", prev, show);
 
             if let Some(prev) = prev {
                 if !prev && show {

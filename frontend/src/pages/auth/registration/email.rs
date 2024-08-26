@@ -16,7 +16,7 @@ use crate::{
         alert_message::{use_alert_message, MessageVariant},
         oauth2_links::OAuth2Links,
     },
-    pages::auth::authentication::AUTHENTICATION_PAGE_URL,
+    pages::auth::sign_in::SIGN_IN_PAGE_URL,
     utils::{error::log_rpc_error, rpc_provider::use_rpc_client},
 };
 
@@ -96,14 +96,14 @@ where
 
     view! {
         <div class="w-full lg:h-lvh bg-white lg:bg-slate-100">
-            <div class="mx-auto mt-20 lg:mt-0 mb-20 lg:relative lg:top-9/20 lg:-translate-y-1/2 max-w-screen-lg w-full px-4 sm:px-12 lg:py-16 rounded-xl bg-white">
+            <div class="mx-auto mt-20 lg:mt-0 lg:mb-20 lg:relative lg:top-9/20 lg:-translate-y-1/2 max-w-screen-lg w-full px-4 sm:px-12 lg:py-16 rounded-xl bg-white">
                 <div class="lg:grid lg:grid-cols-2 lg:gap-x-12">
                     <div>
                         <p class="text-4xl lg:text-5xl">"Create a new account"</p>
                         <p class="mt-4">"Register via email or one of the supported OAuth2 services."</p>
                     </div>
                     <div class="mt-10 lg:mt-0">
-                        <div class="space-y-4">
+                        <div>
                             <label class="block">
                                 <p>"Via email"</p>
                                 <input
@@ -138,7 +138,7 @@ where
                 </div>
                 <div class="mt-16 sm:mt-32 flex flex-col-reverse min-[500px]:flex-row min-[500px]:justify-between">
                     <div class="mt-4 min-[500px]:mt-0 flex flex-col items-stretch text-center">
-                        <Anchor href=AUTHENTICATION_PAGE_URL>"I have already an account"</Anchor>
+                        <Anchor href=SIGN_IN_PAGE_URL>"I have already an account"</Anchor>
                     </div>
                     <Button
                         kind=ButtonKind::Primary

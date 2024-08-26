@@ -1,7 +1,10 @@
 use leptos::*;
 use leptos_router::A;
 
-use crate::components::alert_message::{use_alert_message, MessageVariant};
+use crate::{
+    components::alert_message::{use_alert_message, MessageVariant},
+    pages::auth::{registration::sign_up::SIGN_UP_PAGE_URL, sign_in::SIGN_IN_PAGE_URL},
+};
 
 #[component]
 pub fn Root() -> impl IntoView {
@@ -14,7 +17,7 @@ pub fn Root() -> impl IntoView {
     view! {
         <header class="flex-shrink-0 sticky w-full top-0 left-0 h-11 bg-stone-800 backdrop-blur border-b border-gray-200 z-10">
             <div class="px-5 py-[6px] h-full flex flex-wrap justify-end">
-                <A href="/authentication" class="
+                <A href=SIGN_IN_PAGE_URL class="
                     flex items-center justify-center
                     h-full px-4 bg-blue-500
                     hover:bg-blue-600 hover:cursor-pointer
@@ -35,7 +38,7 @@ pub fn Root() -> impl IntoView {
                 </p>
             </div>
 
-            <A href="/registration" class="
+            <A href=SIGN_UP_PAGE_URL class="
                 mx-auto py-4 w-60
                 flex items-center justify-center
                 h-full px-4 bg-lime-500

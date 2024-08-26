@@ -7,9 +7,7 @@ use axum::{
     routing::get,
     Router,
 };
-use common::{
-    entity::user::USER_AVATAR_SIZE, routes::auth::registration::register::RegistrationKind,
-};
+use common::entity::{registration_kind::RegistrationKind, user::USER_AVATAR_SIZE};
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, RedirectUrl, RevocationUrl, Scope, TokenResponse, TokenUrl,
@@ -18,7 +16,7 @@ use serde::Deserialize;
 use service::query::Query as ServiceQuery;
 use tower_sessions::Session;
 
-use super::{AuthRequest, OAuthError};
+use super::{AuthRequest, OAuthError, AUTH_SUCCESS_PAGE_URL, SIGN_UP_OAUTH2_PAGE_URL};
 use crate::{
     environment::Environment,
     routes::auth::generate_jwt_token,
@@ -146,11 +144,11 @@ pub async fn authorized(
         insert_session_key(&session, REGISTRATION_EMAIL_KEY, profile.email).await?;
         insert_session_key(&session, REGISTRATION_AVATAR_URI_KEY, avatar_uri).await?;
 
-        return Ok(Redirect::to("/registration_details"));
+        return Ok(Redirect::to(SIGN_UP_OAUTH2_PAGE_URL));
     };
 
     let token = generate_jwt_token(&state, user.id.to_string())?;
     insert_session_key(&session, JWT_TOKEN_KEY, token).await?;
 
-    Ok(Redirect::to("/oauth2_authentication"))
+    Ok(Redirect::to(AUTH_SUCCESS_PAGE_URL))
 }

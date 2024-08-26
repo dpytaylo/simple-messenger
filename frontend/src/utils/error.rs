@@ -15,6 +15,11 @@ pub fn log_rpc_error(rpc_error: RpcError) {
             alert.create(RPC_ERROR_MSG, MessageVariant::Failure, Default::default());
         }
 
+        RpcError::ServerError { code, message } => {
+            error!(status = ?code, error = ?message, "RPC server error");
+            alert.create(RPC_ERROR_MSG, MessageVariant::Failure, Default::default());
+        }
+
         RpcError::ValidationError(err) => {
             error!(error = ?err, "RPC validation error");
             alert.create(RPC_ERROR_MSG, MessageVariant::Failure, Default::default());

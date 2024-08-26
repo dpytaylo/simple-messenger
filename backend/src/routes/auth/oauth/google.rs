@@ -7,7 +7,7 @@ use axum::{
     routing::get,
     Router,
 };
-use common::routes::auth::registration::register::RegistrationKind;
+use common::entity::registration_kind::RegistrationKind;
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, RedirectUrl, RevocationUrl, Scope, TokenResponse, TokenUrl,
@@ -16,7 +16,7 @@ use serde::Deserialize;
 use service::query::Query as ServiceQuery;
 use tower_sessions::Session;
 
-use super::{AuthRequest, OAuthError};
+use super::{AuthRequest, OAuthError, AUTH_SUCCESS_PAGE_URL, SIGN_UP_OAUTH2_PAGE_URL};
 use crate::{
     environment::Environment,
     session::{insert_session_key, REGISTRATION_EMAIL_KEY, REGISTRATION_KIND_KEY},
@@ -132,8 +132,8 @@ pub async fn authorized(
         insert_session_key(&session, REGISTRATION_KIND_KEY, RegistrationKind::Google).await?;
         insert_session_key(&session, REGISTRATION_EMAIL_KEY, profile.email).await?;
 
-        return Ok(Redirect::to("/registration_details"));
+        return Ok(Redirect::to(SIGN_UP_OAUTH2_PAGE_URL));
     };
 
-    Ok(Redirect::to("/oauth2_register_successfully"))
+    Ok(Redirect::to(AUTH_SUCCESS_PAGE_URL))
 }

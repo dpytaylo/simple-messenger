@@ -5,7 +5,6 @@ pub enum ButtonKind {
     Primary,
     #[default]
     Secondary,
-    Transparent,
 }
 
 #[component]
@@ -26,9 +25,6 @@ pub fn Button(
         let kind_classes = match kind() {
             ButtonKind::Primary => "text-white enabled:bg-blue-500 enabled:hover:bg-blue-600 ",
             ButtonKind::Secondary => "text-white enabled:bg-gray-500 enabled:hover:bg-gray-600 ",
-            ButtonKind::Transparent => {
-                "text-blue-500 enabled:bg-transparent enabled:hover:text-blue-400 "
-            }
         };
 
         format!("{default}{kind_classes}{}", class())

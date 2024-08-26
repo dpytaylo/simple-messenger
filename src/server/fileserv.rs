@@ -78,11 +78,9 @@ async fn get_static_file(uri: Uri, root: &str) -> Response {
 
     // `ServeDir` implements `tower::Service` so we can call it with `tower::ServiceExt::oneshot`
     // This path is relative to the cargo root
-    match ServeDir::new(root).oneshot(request).await {
-        Ok(val) => val.into_response(),
-        Err(err) => {
-            error!("serve dir error ({err})");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    ServeDir::new(root)
+        .oneshot(request)
+        .await
+        .unwrap()
+        .into_response()
 }

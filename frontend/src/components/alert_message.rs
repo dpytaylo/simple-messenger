@@ -52,21 +52,6 @@ impl AlertMessages {
             })
         })
     }
-
-    // pub fn create_error(&self, title: impl ToString, description: impl ToString) {
-    //     let title = title.to_string();
-    //     let description = description.to_string();
-
-    //     error!(title = title, description = description);
-
-    //     self.messages.update(move |val| {
-    //         val.push(AlertMessage {
-    //             id: Uuid::new_v4(),
-    //             title,
-    //             description,
-    //         })
-    //     })
-    // }
 }
 
 #[derive(Clone)]
@@ -77,26 +62,6 @@ pub struct AlertMessage {
     pub description: Option<String>,
     pub is_closable: bool,
     pub duration: Option<Duration>,
-}
-
-impl AlertMessage {
-    pub fn new(
-        id: Uuid,
-        title: String,
-        variant: MessageVariant,
-        description: Option<String>,
-        is_closable: bool,
-        duration: Option<Duration>,
-    ) -> Self {
-        Self {
-            id,
-            title,
-            variant,
-            description,
-            is_closable,
-            duration,
-        }
-    }
 }
 
 #[component]
