@@ -12,7 +12,7 @@ use pages::{
         success::{AuthSuccess, AUTH_SUCCESS_PAGE_URL},
     },
 };
-use utils::{authorization::provide_authorization, rpc_provider::provide_rpc_client};
+use utils::{client::provide_client, rpc_provider::provide_rpc_client};
 
 use crate::{
     pages::auth::{registration::sign_up::SignUp, sign_in::SignIn},
@@ -28,7 +28,7 @@ pub use pages::error_template::ErrorTemplate;
 
 #[component]
 pub fn Frontend() -> impl IntoView {
-    provide_authorization();
+    provide_client();
     provide_rpc_client("http://localhost:3000/api/rpc/");
 
     view! {

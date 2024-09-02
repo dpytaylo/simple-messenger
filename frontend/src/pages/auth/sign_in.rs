@@ -19,7 +19,7 @@ use crate::{
         oauth2_links::OAuth2Links,
     },
     pages::{app::APP_PAGE_URL, auth::registration::sign_up::SIGN_UP_PAGE_URL},
-    utils::{authorization::use_authorization, error::log_rpc_error, rpc_provider::use_rpc_client},
+    utils::{client::use_client, error::log_rpc_error, rpc_provider::use_rpc_client},
 };
 
 pub const SIGN_IN_PAGE_URL: &str = "/sign-in";
@@ -28,7 +28,7 @@ pub const SIGN_IN_PAGE_URL: &str = "/sign-in";
 pub fn SignIn() -> impl IntoView {
     let navigate = use_navigate();
     let alert = use_alert_message();
-    let authorization = use_authorization();
+    let authorization = use_client();
 
     let (email, set_email) = create_signal("".to_owned());
     let (password, set_password) = create_signal("".to_owned());

@@ -9,7 +9,7 @@ use super::details::Details;
 use crate::components::alert_message::{use_alert_message, MessageOptions, MessageVariant};
 use crate::pages::app::APP_PAGE_URL;
 use crate::pages::auth::registration::summary_oauth2::SummaryOAuth2;
-use crate::utils::authorization::use_authorization;
+use crate::utils::client::use_client;
 use crate::utils::error::log_rpc_error;
 use crate::utils::rpc_provider::use_rpc_client;
 
@@ -44,7 +44,7 @@ impl SignUpOAuth2Step {
 pub fn SignUpOAuth2() -> impl IntoView {
     let navigate = use_navigate();
     let alert = use_alert_message();
-    let authorization = use_authorization();
+    let authorization = use_client();
 
     let (step, set_step) = create_signal(SignUpOAuth2Step::Details);
 

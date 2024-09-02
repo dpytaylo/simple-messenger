@@ -11,6 +11,7 @@ rpc = { workspace = true, features = ["client"] }
 
 axum = { workspace = true, optional = true }
 cfg-if.workspace = true
+codee.workspace = true
 garde.workspace = true
 gloo-net.workspace = true
 http.workspace = true
@@ -37,6 +38,7 @@ ssr = [
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",
+    "leptos-use/axum",
     "leptos-use/ssr",
 
     "dep:backend",

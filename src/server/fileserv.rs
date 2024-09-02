@@ -12,7 +12,7 @@ use http::{StatusCode, Uri};
 use leptos::*;
 use strum::IntoStaticStr;
 use thiserror::Error;
-use tower::ServiceExt;
+use tower::util::ServiceExt;
 use tower_http::services::ServeDir;
 use tracing::error;
 
@@ -38,7 +38,6 @@ impl IntoResponse for FileAndErrorHandlerError {
     }
 }
 
-#[axum::debug_handler]
 pub async fn file_and_error_handler(
     uri: Uri,
     State(state): State<Arc<ServerState>>,

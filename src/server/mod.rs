@@ -7,9 +7,12 @@ use leptos_axum::LeptosRoutes;
 use time::Duration;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
-use tower_http::cors::CorsLayer;
+use tower_http::{
+    cors::CorsLayer,
+    trace::{DefaultMakeSpan, TraceLayer},
+};
 use tower_sessions::{Expiry, MemoryStore, SessionManagerLayer};
-use tracing::info;
+use tracing::{info, Level};
 
 use crate::App;
 
@@ -56,6 +59,10 @@ pub async fn run() -> anyhow::Result<()> {
         .fallback(fileserv::file_and_error_handler)
         .layer(
             ServiceBuilder::new()
+                .layer(
+                    TraceLayer::new_for_http()
+                        .make_span_with(DefaultMakeSpan::new().level(Level::INFO)),
+                )
                 .layer(CorsLayer::very_permissive())
                 .layer(session_layer),
         )
