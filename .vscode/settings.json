@@ -7,7 +7,4 @@
         "*.rs": "html"
     },
     "css.validate": true,
-    "rust-analyzer.cargo.features": [
-        "ssr"
-    ]
 }

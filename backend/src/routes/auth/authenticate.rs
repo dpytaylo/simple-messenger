@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use axum::extract::State;
-use common::{
-    entity::user::{Email, Password},
+use backend_api::{
+    entities::user::{Email, Password},
     routes::auth::authenticate::{AuthenticateError, AuthenticateRequest, AuthenticateResponse},
 };
 use garde::Valid;
@@ -12,7 +12,7 @@ use scrypt::{
     password_hash::{PasswordHash, PasswordVerifier},
     Scrypt,
 };
-use service::query::Query;
+use backend_db::query::Query;
 use thiserror::Error;
 use tracing::instrument;
 

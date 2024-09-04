@@ -15,7 +15,7 @@ pub mod utils;
 
 pub const INTERNAL_SERVER_ERROR_STR: &str = "InternalServerError";
 
-pub fn routes(state: ServerStateWrapper) -> Router<ServerStateWrapper> {
+pub fn app(state: ServerStateWrapper) -> Router<ServerStateWrapper> {
     Router::new()
         .nest("/", routes::routes(state))
         .layer(ServiceBuilder::new().layer(middleware::map_response(mw_main_response_mapper)))

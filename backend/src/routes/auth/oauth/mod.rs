@@ -3,7 +3,7 @@ use axum::{
     routing::get,
     Router,
 };
-use common::routes::auth::oauth::OAuthClientError;
+use backend_api::routes::auth::oauth::OAuthClientError;
 use http::StatusCode;
 use serde::Deserialize;
 use strum::IntoStaticStr;

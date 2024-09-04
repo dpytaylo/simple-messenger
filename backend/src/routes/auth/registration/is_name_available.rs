@@ -2,15 +2,15 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use axum::extract::State;
-use common::{
-    entity::user::Name,
+use backend_api::{
+    entities::user::Name,
     routes::auth::registration::is_name_available::{
         IsNameAvailableError, IsNameAvailableRequest, IsNameAvailableResponse,
     },
 };
 use garde::Valid;
 use rpc::server::error::{IntoProcFailure, ProcedureError};
-use service::query::Query;
+use backend_db::query::Query;
 use thiserror::Error;
 use tracing::instrument;
 

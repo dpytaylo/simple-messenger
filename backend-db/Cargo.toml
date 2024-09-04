@@ -1,0 +1,11 @@
+[package]
+name = "backend-db"
+version.workspace = true
+edition = "2021"
+
+[dependencies]
+serde.workspace = true
+sqlx.workspace = true
+strum.workspace = true
+thiserror.workspace = true
+uuid.workspace = true

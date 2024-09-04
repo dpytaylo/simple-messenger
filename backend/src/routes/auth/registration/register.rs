@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use axum::extract::State;
-use common::{
-    entity::{
+use backend_api::{
+    entities::{
         registration_kind::RegistrationKind,
         user::{Email, Name},
     },
@@ -17,7 +17,7 @@ use scrypt::{
     password_hash::{PasswordHasher, SaltString},
     Scrypt,
 };
-use service::{
+use backend_db::{
     mutation::{CreateUserData, Mutation},
     query::Query,
 };
@@ -26,12 +26,12 @@ use tracing::instrument;
 
 use crate::{routes::auth::generate_jwt_token, state::ServerState, utils::dto_entity::ToEntity};
 
-impl ToEntity<service::RegistrationKind> for RegistrationKind {
-    fn to_entity(&self) -> service::RegistrationKind {
+impl ToEntity<backend_db::RegistrationKind> for RegistrationKind {
+    fn to_entity(&self) -> backend_db::RegistrationKind {
         match self {
-            Self::Email => service::RegistrationKind::Email,
-            Self::Discord => service::RegistrationKind::Discord,
-            Self::Google => service::RegistrationKind::Google,
+            Self::Email => backend_db::RegistrationKind::Email,
+            Self::Discord => backend_db::RegistrationKind::Discord,
+            Self::Google => backend_db::RegistrationKind::Google,
         }
     }
 }

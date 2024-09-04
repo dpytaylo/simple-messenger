@@ -1,6 +1,6 @@
 use auth::registration::register_oauth2;
 use axum::{middleware, routing::get, Router};
-use common::routes::auth::{
+use backend_api::routes::auth::{
     authenticate::Authenticate,
     registration::{
         is_email_available::IsEmailAvailable, is_name_available::IsNameAvailable,

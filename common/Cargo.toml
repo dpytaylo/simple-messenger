@@ -1,9 +1,0 @@
-[package]
-name = "common"
-version.workspace = true
-edition = "2021"
-
-[dependencies]
-garde.workspace = true
-rpc.workspace = true
-serde.workspace = true

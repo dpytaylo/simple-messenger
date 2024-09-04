@@ -22,6 +22,7 @@ pub struct Environment {
     pub google_client_secret: String,
 }
 
+// TODO replace with clap
 impl Environment {
     pub fn new() -> anyhow::Result<Self> {
         Ok(Self {

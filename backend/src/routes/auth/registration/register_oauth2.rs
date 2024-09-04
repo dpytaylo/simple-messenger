@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use axum::extract::State;
-use common::{
-    entity::{
+use backend_api::{
+    entities::{
         registration_kind::RegistrationKind,
         user::{Email, Name},
     },
@@ -13,7 +13,7 @@ use common::{
 };
 use garde::{Unvalidated, Valid};
 use rpc::server::error::{IntoProcFailure, ProcedureError};
-use service::mutation::{CreateUserData, Mutation};
+use backend_db::mutation::{CreateUserData, Mutation};
 use thiserror::Error;
 use tower_sessions::Session;
 use tracing::instrument;

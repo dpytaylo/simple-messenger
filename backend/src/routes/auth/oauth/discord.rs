@@ -7,13 +7,12 @@ use axum::{
     routing::get,
     Router,
 };
-use common::entity::{registration_kind::RegistrationKind, user::USER_AVATAR_SIZE};
+use backend_api::entities::{registration_kind::RegistrationKind, user::USER_AVATAR_SIZE};
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, RedirectUrl, RevocationUrl, Scope, TokenResponse, TokenUrl,
 };
 use serde::Deserialize;
-use service::query::Query as ServiceQuery;
 use tower_sessions::Session;
 
 use super::{AuthRequest, OAuthError, AUTH_SUCCESS_PAGE_URL, SIGN_UP_OAUTH2_PAGE_URL};

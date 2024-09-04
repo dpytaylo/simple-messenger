@@ -4,10 +4,8 @@ version.workspace = true
 edition = "2021"
 
 [dependencies]
-common = { path = "../common" }
-entity = { path = "../entity" }
-migration = { path = "../migration" }
-service = { path = "../service" }
+backend-api.workspace = true
+backend-db.workspace = true
 
 rpc = { workspace = true, features = ["server"] }
 
@@ -24,9 +22,9 @@ oauth2.workspace = true
 rand_chacha.workspace = true
 reqwest.workspace = true
 scrypt.workspace = true
-sea-orm.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sqlx.workspace = true
 strum.workspace = true
 time.workspace = true
 thiserror.workspace = true
