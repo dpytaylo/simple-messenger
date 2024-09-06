@@ -1,6 +1,8 @@
-use rpc::{dto, procedure, request};
+use rpc::{dto, procedure};
 
-use crate::entities::user::{Email, Name, Password};
+use crate::entities::{
+    avatar_uri::AvatarUri, email::Email, password::Password, username::Username,
+};
 
 procedure! {
     name: "register",
@@ -9,19 +11,12 @@ procedure! {
     error: RegisterError,
 }
 
-#[request]
+#[dto]
 pub struct RegisterRequest {
-    #[garde(dive)]
     pub email: Email,
-
-    #[garde(dive)]
     pub password: Password,
-
-    #[garde(dive)]
-    pub name: Name,
-
-    #[garde(ascii, length(max = 512))]
-    pub avatar: Option<String>,
+    pub name: Username,
+    pub avatar: Option<AvatarUri>,
 }
 
 #[dto]

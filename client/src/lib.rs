@@ -29,7 +29,9 @@ pub use pages::error_template::ErrorTemplate;
 #[component]
 pub fn Frontend() -> impl IntoView {
     provide_client();
-    provide_rpc_client("http://localhost:3000/api/rpc/");
+
+    // TODO backend url should not to be hardcoded
+    provide_rpc_client("http://localhost:8080/api/rpc/");
 
     view! {
         <div class="font-content">

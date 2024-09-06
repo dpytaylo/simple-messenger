@@ -1,8 +1,8 @@
+use api::routes::auth::oauth::token::{TokenClientError, TokenResponse};
 use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use backend_api::routes::auth::oauth::token::{TokenClientError, TokenResponse};
 use http::StatusCode;
 use strum::IntoStaticStr;
 use thiserror::Error;

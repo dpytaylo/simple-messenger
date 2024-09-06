@@ -1,12 +1,13 @@
 use std::fmt;
 
-use anyhow::Context;
 use garde::Validate;
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::parser::ParseError;
+
 pub const MAX_PASSWORD_SIZE: usize = 100;
 
-#[derive(Clone, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Hash, Deserialize, Serialize)]
 pub struct Password(#[serde(deserialize_with = "parse")] String);
 
 impl fmt::Debug for Password {
@@ -20,13 +21,17 @@ impl fmt::Debug for Password {
 struct Validator<'a>(#[garde(length(min = 1, max = MAX_PASSWORD_SIZE))] &'a str);
 
 impl Password {
-    pub fn new(value: String) -> anyhow::Result<Self> {
-        Validator(&value).validate().context("Invalid password")?;
+    pub fn new(value: String) -> Result<Self, ParseError> {
+        Validator(&value).validate()?;
         Ok(Self(value))
     }
 
     pub fn value(&self) -> &str {
         &self.0
+    }
+
+    pub fn into_raw(self) -> String {
+        self.0
     }
 }
 
@@ -41,4 +46,10 @@ where
         .map_err(serde::de::Error::custom)?;
 
     Ok(value)
+}
+
+impl From<Password> for String {
+    fn from(password: Password) -> Self {
+        password.0
+    }
 }

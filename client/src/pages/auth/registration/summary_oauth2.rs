@@ -1,15 +1,21 @@
-use backend_api::entities::user::Name;
+use backend_api::entities::username::Username;
 use leptos::*;
 
 use crate::atoms::button::{Button, ButtonKind};
 
 #[component]
-pub fn SummaryOAuth2<BF, NF>(back_step: BF, next_step: NF, name: Name) -> impl IntoView
+pub fn SummaryOAuth2<BF, NF>(
+    back_step: BF,
+    next_step: NF,
+    name: Username,
+    is_processing: RwSignal<bool>,
+) -> impl IntoView
 where
     BF: Fn() + 'static,
     NF: Fn() + 'static,
 {
     let on_submit = move |_| {
+        is_processing.set(true);
         next_step();
     };
 
@@ -27,7 +33,7 @@ where
                             <input
                                 class="mt-1 h-11 px-2 py-1 w-full border border-gray-400 rounded-md"
                                 readonly=true
-                                prop:value=name.0
+                                prop:value=name.into_raw()
                             />
                         </label>
                     </div>
@@ -45,6 +51,7 @@ where
                         kind=ButtonKind::Primary
                         class="w-full min-[500px]:w-28 h-12 min-[500px]:h-10"
                         on:click=on_submit
+                        is_processing=is_processing
                     >
                         "Register"
                     </Button>

@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use backend_api::routes::auth::registration::register_oauth2::{RegisterOAuth2Request, RegisterOauth2};
+use backend_api::routes::auth::registration::register_oauth2::{
+    RegisterOAuth2Request, RegisterOauth2,
+};
 use leptos::*;
 use leptos_router::{use_navigate, NavigateOptions};
 use tracing::error;
@@ -10,6 +12,7 @@ use crate::components::alert_message::{use_alert_message, MessageOptions, Messag
 use crate::pages::app::APP_PAGE_URL;
 use crate::pages::auth::registration::summary_oauth2::SummaryOAuth2;
 use crate::utils::client::use_client;
+use crate::utils::defer::defer;
 use crate::utils::error::log_rpc_error;
 use crate::utils::rpc_provider::use_rpc_client;
 
@@ -57,6 +60,7 @@ pub fn SignUpOAuth2() -> impl IntoView {
         async move { rpc_client.call::<RegisterOauth2>(&input).await }
     });
     let register_value = register.value();
+    let is_processing = create_rw_signal(false);
 
     let back_step = move || set_step.update(|val| *val = val.clone().back());
     let next_step = move || set_step.update(|val| *val = val.clone().next());
@@ -73,6 +77,10 @@ pub fn SignUpOAuth2() -> impl IntoView {
         let Some(rpc_result) = register_value.get() else {
             return;
         };
+
+        defer! {
+            is_processing.set(false);
+        }
 
         let result = match rpc_result {
             Ok(val) => val,
@@ -124,6 +132,7 @@ pub fn SignUpOAuth2() -> impl IntoView {
                 back_step
                 next_step
                 name=name.get_untracked().unwrap()
+                is_processing
             />
         </Show>
     }

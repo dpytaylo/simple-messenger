@@ -1,22 +1,18 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::extract::State;
-use backend_api::{
-    entities::{
-        registration_kind::RegistrationKind,
-        user::{Email, Name},
-    },
+use api::{
+    entities::{email::Email, registration_kind::RegistrationKind, username::Username},
     routes::auth::registration::register_oauth2::{
         RegisterOAuth2Error, RegisterOAuth2Request, RegisterOAuth2Response,
     },
 };
-use garde::{Unvalidated, Valid};
+use axum::extract::State;
 use rpc::server::error::{IntoProcFailure, ProcedureError};
-use backend_db::mutation::{CreateUserData, Mutation};
 use thiserror::Error;
 use tower_sessions::Session;
 use tracing::instrument;
+use uuid::Uuid;
 
 use crate::{
     routes::auth::generate_jwt_token,
@@ -25,7 +21,6 @@ use crate::{
         REGISTRATION_KIND_KEY,
     },
     state::ServerState,
-    utils::dto_entity::ToEntity,
 };
 
 #[derive(Debug, Error)]
@@ -46,37 +41,39 @@ impl ProcedureError<RegisterOAuth2Error> for RegisterOAuth2SError {
 pub async fn register_oauth2(
     State(state): State<Arc<ServerState>>,
     session: Session,
-    request: Valid<RegisterOAuth2Request>,
+    request: RegisterOAuth2Request,
 ) -> Result<RegisterOAuth2Response, RegisterOAuth2SError> {
-    let RegisterOAuth2Request {
-        name: Name(name),
-        avatar,
-    } = request.into_inner();
-
     let kind: RegistrationKind = get_session_value(&session, REGISTRATION_KIND_KEY).await?;
-    let email: String = get_session_value(&session, REGISTRATION_EMAIL_KEY).await?;
+    let email: Email = get_session_value(&session, REGISTRATION_EMAIL_KEY).await?;
 
-    let avatar = avatar.or(get_session_value(&session, REGISTRATION_AVATAR_URI_KEY).await?);
+    let avatar = request
+        .avatar
+        .or(get_session_value(&session, REGISTRATION_AVATAR_URI_KEY).await?);
 
-    let email = Unvalidated::new(Email(email))
-        .validate()
-        .context("failed to validate email")?;
+    // Searches for an available username
+    let username = loop {
+        let full_uuid = Uuid::new_v4().to_string();
 
-    // TODO avatar validation
+        // Takes the first 13 characters of the UUID
+        // For example, if the UUID is 'cb6a7ea5-45fa-44d9-9c9d-1d7190076e63'
+        // The part_uuid will be 'cb6a7ea5-45fa'
+        let left_part_uuid = &full_uuid[..13];
 
-    let mut user = Mutation::create_user(
-        &state.db,
-        CreateUserData {
-            kind: kind.to_entity(),
-            email: email.into_inner().0,
-            password: None,
-            name,
-            avatar,
-        },
-    )
-    .await
-    .context("failed to create oauth2 user")?;
+        let username = Username::new(format!("user-{}", left_part_uuid))?; // 'user-cb6a7ea5-45fa'
 
-    let token = generate_jwt_token(&state, user.id.take().unwrap().into())?;
+        if db::user::find_by_name(&state.db, &username)
+            .await
+            .context("failed to check if name is available")?
+            .is_none()
+        {
+            break username;
+        }
+    };
+
+    let user = db::user::create(&state.db, kind, &email, None, &username, avatar.as_ref())
+        .await
+        .context("failed to create oauth2 user")?;
+
+    let token = generate_jwt_token(&state, user.id.to_string())?;
     Ok(RegisterOAuth2Response { token })
 }

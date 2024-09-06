@@ -1,45 +1,39 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::extract::State;
-use backend_api::{
-    entities::user::Name,
-    routes::auth::registration::is_name_available::{
-        IsNameAvailableError, IsNameAvailableRequest, IsNameAvailableResponse,
-    },
+use api::routes::auth::registration::is_name_available::{
+    IsUsernameAvailableError, IsUsernameAvailableRequest, IsUsernameAvailableResponse,
 };
-use garde::Valid;
+use axum::extract::State;
 use rpc::server::error::{IntoProcFailure, ProcedureError};
-use backend_db::query::Query;
 use thiserror::Error;
 use tracing::instrument;
 
 use crate::state::ServerState;
 
 #[derive(Debug, Error)]
-pub enum IsNameAvailableServerError {
+pub enum IsUsernameAvailableServerError {
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
 
-impl ProcedureError<IsNameAvailableError> for IsNameAvailableServerError {
-    fn into_procedure_error(self) -> impl IntoProcFailure<IsNameAvailableError> {
+impl ProcedureError<IsUsernameAvailableError> for IsUsernameAvailableServerError {
+    fn into_procedure_error(self) -> impl IntoProcFailure<IsUsernameAvailableError> {
         match self {
-            Self::Other(_) => IsNameAvailableError::Other.into_proc_failure(),
+            Self::Other(_) => IsUsernameAvailableError::Other.into_proc_failure(),
         }
     }
 }
 
 #[instrument(skip(state), err)]
-pub async fn is_name_available(
+pub async fn is_username_available(
     State(state): State<Arc<ServerState>>,
-    request: Valid<IsNameAvailableRequest>,
-) -> Result<IsNameAvailableResponse, IsNameAvailableServerError> {
-    let IsNameAvailableRequest { name: Name(name) } = request.into_inner();
-
-    let is_available = Query::is_name_available(&state.db, &name)
+    request: IsUsernameAvailableRequest,
+) -> Result<IsUsernameAvailableResponse, IsUsernameAvailableServerError> {
+    let is_available = db::user::find_by_name(&state.db, &request.name)
         .await
-        .context("failed to check if name is available")?;
+        .context("failed to check if name is available")?
+        .is_none();
 
-    return Ok(IsNameAvailableResponse { is_available });
+    return Ok(IsUsernameAvailableResponse { is_available });
 }

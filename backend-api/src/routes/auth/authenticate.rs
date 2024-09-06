@@ -1,6 +1,6 @@
-use rpc::{dto, procedure, request};
+use rpc::{dto, procedure};
 
-use crate::entities::user::{Email, Password};
+use crate::entities::{email::Email, password::Password};
 
 procedure! {
     name: "authenticate",
@@ -9,12 +9,9 @@ procedure! {
     error: AuthenticateError,
 }
 
-#[request]
+#[dto]
 pub struct AuthenticateRequest {
-    #[garde(dive)]
     pub email: Email,
-
-    #[garde(dive)]
     pub password: Password,
 }
 

@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 garde.workspace = true
-nutype.workspace = true
+http.workspace = true
 rpc.workspace = true
 serde.workspace = true
 thiserror.workspace = true

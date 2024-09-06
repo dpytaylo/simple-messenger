@@ -7,7 +7,7 @@ use tower_cookies::{
 
 // pub const SESSION_TOKEN: &str = "session-token";
 
-pub fn create_secure_cookie(key: &'static str, value: String) -> Cookie {
+pub fn create_secure_cookie(key: &'static str, value: String) -> Cookie<'static> {
     Cookie::build((key, value))
         .http_only(true) // Defences against XSS
         .secure(true) // Only secure connention (https)

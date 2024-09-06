@@ -1,19 +1,18 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Error};
+use api::entities::{email::Email, registration_kind::RegistrationKind};
 use axum::{
     extract::{Query, State},
     response::Redirect,
     routing::get,
     Router,
 };
-use backend_api::entities::registration_kind::RegistrationKind;
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, RedirectUrl, RevocationUrl, Scope, TokenResponse, TokenUrl,
 };
 use serde::Deserialize;
-use backend_db::query::Query as ServiceQuery;
 use tower_sessions::Session;
 
 use super::{AuthRequest, OAuthError, AUTH_SUCCESS_PAGE_URL, SIGN_UP_OAUTH2_PAGE_URL};
@@ -110,6 +109,8 @@ pub async fn authorized(
         .await
         .context("failed to request token")?;
 
+    let email = Email::new(profile.email).context("invalid email")?;
+
     let token_to_revoke = match token.refresh_token() {
         Some(val) => val.into(),
         None => token.access_token().into(),
@@ -124,13 +125,13 @@ pub async fn authorized(
         .await
         .context("failed to revoke token")?;
 
-    if ServiceQuery::find_user_by_email(&state.db, &profile.email)
+    if db::user::find_by_email(&state.db, &email)
         .await
         .map_err(Error::msg)?
         .is_none()
     {
         insert_session_key(&session, REGISTRATION_KIND_KEY, RegistrationKind::Google).await?;
-        insert_session_key(&session, REGISTRATION_EMAIL_KEY, profile.email).await?;
+        insert_session_key(&session, REGISTRATION_EMAIL_KEY, email).await?;
 
         return Ok(Redirect::to(SIGN_UP_OAUTH2_PAGE_URL));
     };

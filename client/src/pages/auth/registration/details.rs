@@ -1,8 +1,9 @@
 use backend_api::{
-    entities::user::Name,
-    routes::auth::registration::is_name_available::{IsNameAvailable, IsNameAvailableRequest},
+    entities::username::Username,
+    routes::auth::registration::is_name_available::{
+        IsUsernameAvailable, IsUsernameAvailableRequest,
+    },
 };
-use garde::{Unvalidated, Validate};
 use leptos::*;
 use tracing::error;
 
@@ -16,14 +17,12 @@ use crate::{
 pub fn Details<NF>(
     #[prop(optional)] back_step: Option<Box<dyn Fn()>>,
     next_step: NF,
-    name: RwSignal<Option<Name>>,
+    name: RwSignal<Option<Username>>,
 ) -> impl IntoView
 where
     NF: Fn() + 'static,
 {
     let alert = use_alert_message();
-    let name_node: NodeRef<html::Input> = create_node_ref();
-
     let back_button = match back_step {
         Some(back_step) => view! {
             <Button
@@ -41,29 +40,18 @@ where
     let (name_error, set_name_error) = create_signal(None);
     let disabled = Signal::derive(move || name_error().is_some());
 
-    let is_name_available = create_action(move |input: &IsNameAvailableRequest| {
+    let is_name_available = create_action(move |input: &IsUsernameAvailableRequest| {
         let rpc_client = use_rpc_client();
         let input = input.clone();
 
-        async move { rpc_client.call::<IsNameAvailable>(&input).await }
+        async move { rpc_client.call::<IsUsernameAvailable>(&input).await }
     });
 
     let is_name_available_value = is_name_available.value();
 
     let on_continue = move |_| {
-        let name_value = name_node.get().unwrap().value();
-
-        let name_value = match Unvalidated::new(Name(name_value)).validate() {
-            Ok(val) => val,
-            Err(err) => {
-                set_name_error(Some(err.to_string()));
-                return;
-            }
-        };
-
-        name.set(Some(name_value.clone().into_inner()));
-        let request = IsNameAvailableRequest {
-            name: name_value.into_inner(),
+        let request = IsUsernameAvailableRequest {
+            name: name.get_untracked().unwrap(),
         };
 
         is_name_available.dispatch(request);
@@ -125,13 +113,19 @@ where
                                 required=true
                                 placeholder="your nickname"
 
-                                attr:value=name.get_untracked().map(|val| val.0).unwrap_or_default()
+                                attr:value=name.get_untracked().map(|val| val.into_raw()).unwrap_or_default()
 
                                 on:input=move |ev| {
-                                    set_name_error(Name(event_target_value(&ev)).validate().err().map(|vaL| vaL.to_string()));
+                                    match Username::new(event_target_value(&ev)) {
+                                        Ok(val) => {
+                                            name.set(Some(val));
+                                            set_name_error(None);
+                                        }
+                                        Err(err) => {
+                                            set_name_error(Some(err.to_string()));
+                                        }
+                                    }
                                 }
-
-                                _ref = name_node
                             />
                             <p class="my-1 p-1 h-8 text-red-500 text-sm">
                                 {name_error}

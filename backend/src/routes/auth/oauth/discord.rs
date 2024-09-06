@@ -1,13 +1,17 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Error};
+use api::entities::{
+    avatar_uri::{AvatarUri, AVATAR_SIZE},
+    email::Email,
+    registration_kind::RegistrationKind,
+};
 use axum::{
     extract::{Query, State},
     response::{IntoResponse, Redirect},
     routing::get,
     Router,
 };
-use backend_api::entities::{registration_kind::RegistrationKind, user::USER_AVATAR_SIZE};
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, RedirectUrl, RevocationUrl, Scope, TokenResponse, TokenUrl,
@@ -116,10 +120,12 @@ pub async fn authorized(
         .await
         .context("failed to request token")?;
 
-    let avatar_uri = format!(
-        "https://cdn.discordapp.com/avatars/{}/{}.webp?size={USER_AVATAR_SIZE}",
+    let email = Email::new(profile.email).context("invalid email")?;
+    let avatar_uri = AvatarUri::new(format!(
+        "https://cdn.discordapp.com/avatars/{}/{}.webp?size={AVATAR_SIZE}",
         profile.id, profile.avatar
-    );
+    ))
+    .context("invalid avatar URI")?;
 
     let token_to_revoke = match token.refresh_token() {
         Some(val) => val.into(),
@@ -135,12 +141,12 @@ pub async fn authorized(
         .await
         .context("failed to revoke token")?;
 
-    let Some(user) = ServiceQuery::find_user_by_email(&state.db, &profile.email)
+    let Some(user) = db::user::find_by_email(&state.db, &email)
         .await
         .map_err(Error::msg)?
     else {
         insert_session_key(&session, REGISTRATION_KIND_KEY, RegistrationKind::Discord).await?;
-        insert_session_key(&session, REGISTRATION_EMAIL_KEY, profile.email).await?;
+        insert_session_key(&session, REGISTRATION_EMAIL_KEY, email).await?;
         insert_session_key(&session, REGISTRATION_AVATAR_URI_KEY, avatar_uri).await?;
 
         return Ok(Redirect::to(SIGN_UP_OAUTH2_PAGE_URL));

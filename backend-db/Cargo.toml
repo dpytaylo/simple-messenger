@@ -4,6 +4,9 @@ version.workspace = true
 edition = "2021"
 
 [dependencies]
+api = { path = "./../backend-api", package = "backend-api" }
+entity = { path = "./../backend-entity", package = "backend-entity" }
+
 serde.workspace = true
 sqlx.workspace = true
 strum.workspace = true

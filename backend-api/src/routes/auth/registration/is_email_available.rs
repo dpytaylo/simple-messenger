@@ -1,4 +1,4 @@
-use rpc::{dto, procedure, request};
+use rpc::{dto, procedure};
 
 use crate::entities::email::Email;
 
@@ -9,9 +9,8 @@ procedure! {
     error: IsEmailAvailableError,
 }
 
-#[request]
+#[dto]
 pub struct IsEmailAvailableRequest {
-    #[garde(dive)]
     pub email: Email,
 }
 

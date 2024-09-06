@@ -1,9 +1,7 @@
-use anyhow::bail;
+use anyhow::{bail, Context};
 use axum::Router;
 use backend::environment::Environment;
 use backend::state::ServerStateWrapper;
-use leptos::{provide_context, view};
-use leptos_axum::LeptosRoutes;
 use time::Duration;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
@@ -28,14 +26,12 @@ pub async fn main() -> anyhow::Result<()> {
         },
     }
 
-    let environment = Environment::new()?;
+    let environment = Environment::load()?;
+    let state = ServerStateWrapper::new(&environment).await?;
 
-    let conf = leptos::get_configuration(None).await.unwrap();
-    let leptos_options = conf.leptos_options;
-    let addr = leptos_options.site_addr;
-    let routes = leptos_axum::generate_route_list(|| view! { <App/> });
-
-    let state = ServerStateWrapper::new(&environment, leptos_options.clone()).await?;
+    db::migrate(&state.inner.db)
+        .await
+        .context("failed to migrate the database")?;
 
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)
@@ -43,9 +39,7 @@ pub async fn main() -> anyhow::Result<()> {
         .with_expiry(Expiry::OnInactivity(Duration::hours(1)));
 
     let app = Router::new()
-        .nest("/api", backend::app)
-        .leptos_routes(&state.inner.leptos_options, routes, App)
-        .fallback(fileserv::file_and_error_handler)
+        .nest("/api", backend::app(state.clone()))
         .layer(
             ServiceBuilder::new()
                 .layer(
@@ -57,9 +51,9 @@ pub async fn main() -> anyhow::Result<()> {
         )
         .with_state(state);
 
-    let listener = TcpListener::bind(&addr).await?;
+    let listener = TcpListener::bind(&environment.addr).await?;
 
-    info!("Listening on {}", &addr);
+    info!("Listening on {}", &environment.addr);
     axum::serve(listener, app.into_make_service()).await?;
 
     Ok(())

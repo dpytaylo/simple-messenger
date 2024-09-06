@@ -1,10 +1,9 @@
 use std::time::Duration;
 
 use backend_api::{
-    entities::user::{Email, Password},
+    entities::{email::Email, password::Password},
     routes::auth::authenticate::{Authenticate, AuthenticateError, AuthenticateRequest},
 };
-use garde::Validate;
 use leptos::*;
 use leptos_router::{use_navigate, NavigateOptions};
 use tracing::error;
@@ -19,7 +18,7 @@ use crate::{
         oauth2_links::OAuth2Links,
     },
     pages::{app::APP_PAGE_URL, auth::registration::sign_up::SIGN_UP_PAGE_URL},
-    utils::{client::use_client, error::log_rpc_error, rpc_provider::use_rpc_client},
+    utils::{client::use_client, defer::defer, error::log_rpc_error, rpc_provider::use_rpc_client},
 };
 
 pub const SIGN_IN_PAGE_URL: &str = "/sign-in";
@@ -30,8 +29,8 @@ pub fn SignIn() -> impl IntoView {
     let alert = use_alert_message();
     let authorization = use_client();
 
-    let (email, set_email) = create_signal("".to_owned());
-    let (password, set_password) = create_signal("".to_owned());
+    let email_node: NodeRef<html::Input> = create_node_ref();
+    let password_node: NodeRef<html::Input> = create_node_ref();
 
     let (email_error, set_email_error) = create_signal(None);
     let (password_error, set_password_error) = create_signal(None);
@@ -44,17 +43,40 @@ pub fn SignIn() -> impl IntoView {
         async move { rpc_client.call::<Authenticate>(&input).await }
     });
     let authenticate_value = authenticate.value();
+    let (is_processing, set_is_processing) = create_signal(false);
 
     let on_continue = move |_| {
-        authenticate.dispatch(AuthenticateRequest {
-            email: Email(email.get_untracked()),
-            password: Password(password.get_untracked()),
-        });
+        set_is_processing(true);
+
+        let email_value = email_node.get().unwrap().value();
+        let password_value = password_node.get().unwrap().value();
+
+        let (email, password) = match (Email::new(email_value), Password::new(password_value)) {
+            (Ok(val), Ok(val2)) => (val, val2),
+            (email_err, password_err) => {
+                if let Err(err) = email_err {
+                    set_email_error(Some(err.to_string()));
+                }
+
+                if let Err(err) = password_err {
+                    set_password_error(Some(err.to_string()));
+                }
+
+                set_is_processing(false);
+                return;
+            }
+        };
+
+        authenticate.dispatch(AuthenticateRequest { email, password });
     };
 
     create_effect(move |_| {
         let Some(rpc_result) = authenticate_value.get() else {
             return;
+        };
+
+        defer! {
+            set_is_processing(false);
         };
 
         let result = match rpc_result {
@@ -127,12 +149,11 @@ pub fn SignIn() -> impl IntoView {
                                     autocomplete="email"
 
                                     on:input=move |ev| {
-                                        let email = event_target_value(&ev);
-                                        set_email(email.clone());
-
-                                        let err = Email(email).validate().err().map(|val| val.to_string());
+                                        let err = Email::new(event_target_value(&ev)).err().map(|val| val.to_string());
                                         set_email_error(err);
                                     }
+
+                                    node_ref=email_node
                                 />
                                 <p class="my-1 p-1 h-8 text-red-500 text-sm">
                                     {email_error}
@@ -153,12 +174,11 @@ pub fn SignIn() -> impl IntoView {
                                     autocomplete="current-password"
 
                                     on:input=move |ev| {
-                                        let password = event_target_value(&ev);
-                                        set_password(password.clone());
-
-                                        let err = Password(password).validate().err().map(|val| val.to_string());
+                                        let err = Password::new(event_target_value(&ev)).err().map(|val| val.to_string());
                                         set_password_error(err);
                                     }
+
+                                    node_ref=password_node
                                 />
                                 <p class="my-1 p-1 h-8 text-red-500 text-sm">
                                     {password_error}
@@ -177,7 +197,8 @@ pub fn SignIn() -> impl IntoView {
                     <Button
                         kind=ButtonKind::Primary
                         disabled=disabled
-                        class="mt-4 min-[500px]:mt-0 w-full min-[500px]:w-28 h-12 min-[500px]:h-10"
+                        is_processing=is_processing
+                        class="mt-4 min-[500px]:mt-0 w-full min-[500px]:w-fit h-12 min-[500px]:h-10"
                         on:click=on_continue
                     >
                         "Sign In"

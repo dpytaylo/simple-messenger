@@ -1,10 +1,8 @@
 use backend_api::{
-    entities::user::Email,
+    entities::email::Email,
     routes::auth::registration::is_email_available::{IsEmailAvailable, IsEmailAvailableRequest},
 };
-use garde::Unvalidated;
 use leptos::*;
-use rpc::Validate;
 use tracing::error;
 
 use crate::{
@@ -26,7 +24,6 @@ where
     F: Fn() + Clone + 'static,
 {
     let alert = use_alert_message();
-    let email_node: NodeRef<html::Input> = create_node_ref();
 
     let (email_error, set_email_error) = create_signal(None);
     let disabled = Signal::derive(move || email_error().is_some());
@@ -42,21 +39,9 @@ where
     let is_email_available_value = is_email_available.value();
 
     let on_continue = move |_| {
-        let email_value = email_node.get().unwrap().value();
-
-        let email_value = match Unvalidated::new(Email(email_value)).validate() {
-            Ok(val) => val,
-            Err(err) => {
-                set_email_error(Some(err.to_string()));
-                return;
-            }
-        };
-
-        email.set(Some(email_value.clone().into_inner()));
         let request = IsEmailAvailableRequest {
-            email: email_value.into_inner(),
+            email: email.get_untracked().unwrap(),
         };
-
         is_email_available.dispatch(request);
     };
 
@@ -117,14 +102,19 @@ where
                                     placeholder="your email"
                                     autocomplete="email"
 
-                                    attr:value=email.get_untracked().map(|val| val.0).unwrap_or_default()
+                                    attr:value=email.get_untracked().map(|val| val.into_raw()).unwrap_or_default()
 
                                     on:input=move |ev| {
-                                        let err = Email(event_target_value(&ev)).validate().err().map(|val| val.to_string());
-                                        set_email_error(err);
+                                        match Email::new(event_target_value(&ev)) {
+                                            Ok(val) => {
+                                                email.set(Some(val));
+                                                set_email_error(None);
+                                            }
+                                            Err(err) => {
+                                                set_email_error(Some(err.to_string()));
+                                            }
+                                        }
                                     }
-
-                                    node_ref=email_node
                                 />
                                 <p class="my-1 p-1 h-8 text-red-500 text-sm">
                                     {email_error}

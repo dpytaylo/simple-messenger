@@ -1,5 +1,4 @@
-use backend_api::entities::user::{Password, MAX_USER_PASSWORD_SIZE};
-use garde::{Unvalidated, Validate};
+use backend_api::entities::password::{Password, MAX_PASSWORD_SIZE};
 use leptos::{ev::Event, *};
 
 use crate::atoms::button::{Button, ButtonKind};
@@ -29,7 +28,7 @@ where
     let on_continue = move |_| {
         let password_value = password_node.get().unwrap().value();
 
-        let password_value = match Unvalidated::new(Password(password_value)).validate() {
+        let password_value = match Password::new(password_value) {
             Ok(val) => val,
             Err(err) => {
                 set_password_error(Some(err.to_string()));
@@ -37,7 +36,7 @@ where
             }
         };
 
-        password_rw.set(Some(password_value.into_inner()));
+        password_rw.set(Some(password_value));
         next_step();
     };
 
@@ -59,18 +58,18 @@ where
 
                                 type="password"
                                 name="password"
-                                maxlength=MAX_USER_PASSWORD_SIZE
+                                maxlength=MAX_PASSWORD_SIZE
                                 required=true
                                 placeholder="your password"
                                 autocomplete="new-password"
 
-                                attr:value=password_rw.get_untracked().map(|val| val.0).unwrap_or_default()
+                                attr:value=password_rw.get_untracked().map(|val| val.into_raw()).unwrap_or_default()
 
                                 on:input=move |ev| {
                                     let value = event_target_value(&ev);
                                     set_password(value.clone());
 
-                                    let err = Password(value).validate().err().map(|val| val.to_string());
+                                    let err = Password::new(value).err().map(|val| val.to_string());
                                     set_password_error(err);
                                 }
 
@@ -90,12 +89,12 @@ where
 
                                 type="password"
                                 name="confirm"
-                                maxlength=MAX_USER_PASSWORD_SIZE
+                                maxlength=MAX_PASSWORD_SIZE
                                 required=true
                                 placeholder="repeat your password"
                                 autocomplete="new-password"
 
-                                attr:value=password_rw.get_untracked().map(|val| val.0).unwrap_or_default()
+                                attr:value=password_rw.get_untracked().map(|val| val.into_raw()).unwrap_or_default()
 
                                 on:input=move |ev: Event| set_confirm(event_target_value(&ev))
                             />

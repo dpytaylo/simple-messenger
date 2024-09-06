@@ -1,20 +1,17 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use anyhow::Context;
-use axum::extract::State;
-use backend_api::{
-    entities::user::{Email, Password},
-    routes::auth::authenticate::{AuthenticateError, AuthenticateRequest, AuthenticateResponse},
+use api::routes::auth::authenticate::{
+    AuthenticateError, AuthenticateRequest, AuthenticateResponse,
 };
-use garde::Valid;
+use axum::extract::State;
 use rpc::server::error::{IntoProcFailure, ProcedureError};
 use scrypt::{
     password_hash::{PasswordHash, PasswordVerifier},
     Scrypt,
 };
-use backend_db::query::Query;
 use thiserror::Error;
-use tracing::instrument;
+use tracing::{info, instrument};
 
 use super::generate_jwt_token;
 use crate::state::ServerState;
@@ -40,14 +37,9 @@ impl ProcedureError<AuthenticateError> for AuthenticateServerError {
 #[instrument(skip(state), err)]
 pub async fn authenticate(
     State(state): State<Arc<ServerState>>,
-    payload: Valid<AuthenticateRequest>,
+    request: AuthenticateRequest,
 ) -> Result<AuthenticateResponse, AuthenticateServerError> {
-    let AuthenticateRequest {
-        email: Email(email),
-        password: Password(password),
-    } = payload.into_inner();
-
-    let Some(user) = Query::find_user_by_email(&state.db, &email)
+    let Some(user) = db::user::find_by_email(&state.db, &request.email)
         .await
         .context("failed to find user by email")?
     else {
@@ -61,7 +53,7 @@ pub async fn authenticate(
     let parsed_hash = PasswordHash::new(&db_password).context("failed to hash password")?;
 
     if Scrypt
-        .verify_password(password.as_bytes(), &parsed_hash)
+        .verify_password(request.password.value().as_bytes(), &parsed_hash)
         .is_err()
     {
         return Err(AuthenticateServerError::InvalidCredentials);

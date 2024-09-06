@@ -1,4 +1,4 @@
-use backend_api::entities::user::{Email, Name, Password};
+use backend_api::entities::{email::Email, password::Password, username::Username};
 use leptos::*;
 
 use crate::atoms::button::{Button, ButtonKind};
@@ -9,13 +9,15 @@ pub fn Summary<BF, NF>(
     next_step: NF,
     email: Email,
     password: Password,
-    name: Name,
+    name: Username,
+    is_processing: RwSignal<bool>,
 ) -> impl IntoView
 where
     BF: Fn() + 'static,
     NF: Fn() + 'static,
 {
     let on_submit = move |_| {
+        is_processing.set(true);
         next_step();
     };
 
@@ -33,7 +35,7 @@ where
                             <input
                                 class="mt-1 h-11 px-2 py-1 w-full border border-gray-400 rounded-md"
                                 readonly=true
-                                prop:value=email.0
+                                prop:value=email.into_raw()
                             />
                         </label>
 
@@ -43,7 +45,7 @@ where
                                 class="mt-1 h-11 px-2 py-1 w-full border border-gray-400 rounded-md"
                                 readonly=true
                                 type="password"
-                                prop:value=password.0
+                                prop:value=password.into_raw()
                             />
                         </label>
 
@@ -52,7 +54,7 @@ where
                             <input
                                 class="mt-1 h-11 px-2 py-1 w-full border border-gray-400 rounded-md"
                                 readonly=true
-                                prop:value=name.0
+                                prop:value=name.into_raw()
                             />
                         </label>
                     </div>

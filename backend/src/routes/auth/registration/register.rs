@@ -1,15 +1,11 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::extract::State;
-use backend_api::{
-    entities::{
-        registration_kind::RegistrationKind,
-        user::{Email, Name},
-    },
+use api::{
+    entities::registration_kind::RegistrationKind,
     routes::auth::registration::register::{RegisterError, RegisterRequest, RegisterResponse},
 };
-use garde::Valid;
+use axum::extract::State;
 use http::StatusCode;
 use rand_chacha::rand_core::OsRng;
 use rpc::server::error::{IntoProcFailure, ProcedureError};
@@ -17,24 +13,10 @@ use scrypt::{
     password_hash::{PasswordHasher, SaltString},
     Scrypt,
 };
-use backend_db::{
-    mutation::{CreateUserData, Mutation},
-    query::Query,
-};
 use thiserror::Error;
 use tracing::instrument;
 
-use crate::{routes::auth::generate_jwt_token, state::ServerState, utils::dto_entity::ToEntity};
-
-impl ToEntity<backend_db::RegistrationKind> for RegistrationKind {
-    fn to_entity(&self) -> backend_db::RegistrationKind {
-        match self {
-            Self::Email => backend_db::RegistrationKind::Email,
-            Self::Discord => backend_db::RegistrationKind::Discord,
-            Self::Google => backend_db::RegistrationKind::Google,
-        }
-    }
-}
+use crate::{routes::auth::generate_jwt_token, state::ServerState};
 
 #[derive(Debug, Error)]
 pub enum RegisterServerError {
@@ -65,16 +47,9 @@ impl ProcedureError<RegisterError> for RegisterServerError {
 #[instrument(skip(state), err)]
 pub async fn register(
     State(state): State<Arc<ServerState>>,
-    request: Valid<RegisterRequest>,
+    request: RegisterRequest,
 ) -> Result<RegisterResponse, RegisterServerError> {
-    let RegisterRequest {
-        email: Email(email),
-        password,
-        name: Name(name),
-        avatar,
-    } = request.into_inner();
-
-    if Query::find_user_by_email(&state.db, &email)
+    if db::user::find_by_email(&state.db, &request.email)
         .await
         .context("failed to find user by email")?
         .is_some()
@@ -85,23 +60,21 @@ pub async fn register(
     let salt = SaltString::generate(&mut OsRng);
 
     let password_hash = Scrypt
-        .hash_password(password.0.as_bytes(), &salt)
+        .hash_password(request.password.value().as_bytes(), &salt)
         .context("failed to hash password")?
         .to_string();
 
-    let mut user = Mutation::create_user(
+    let user = db::user::create(
         &state.db,
-        CreateUserData {
-            kind: RegistrationKind::Email.to_entity(),
-            email,
-            password: Some(password_hash),
-            name,
-            avatar,
-        },
+        RegistrationKind::Email,
+        &request.email,
+        Some(&password_hash),
+        &request.name,
+        request.avatar.as_ref(),
     )
     .await
     .context("failed to create user")?;
 
-    let token = generate_jwt_token(&state, user.id.take().unwrap().into())?;
+    let token = generate_jwt_token(&state, user.id.to_string())?;
     Ok(RegisterResponse { token })
 }

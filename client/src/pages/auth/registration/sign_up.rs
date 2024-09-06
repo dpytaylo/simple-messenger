@@ -12,6 +12,7 @@ use super::summary::Summary;
 use crate::components::alert_message::{use_alert_message, MessageOptions, MessageVariant};
 use crate::pages::app::APP_PAGE_URL;
 use crate::utils::client::use_client;
+use crate::utils::defer::defer;
 use crate::utils::error::log_rpc_error;
 use crate::utils::rpc_provider::use_rpc_client;
 
@@ -67,6 +68,7 @@ pub fn SignUp() -> impl IntoView {
         async move { rpc_client.call::<Register>(&input).await }
     });
     let register_value = register.value();
+    let is_processing = create_rw_signal(false);
 
     let back_step = move || set_step.update(|val| *val = val.clone().back());
     let next_step = move || set_step.update(|val| *val = val.clone().next());
@@ -85,6 +87,10 @@ pub fn SignUp() -> impl IntoView {
         let Some(rpc_result) = register_value.get() else {
             return;
         };
+
+        defer! {
+            is_processing.set(false);
+        }
 
         let result = match rpc_result {
             Ok(val) => val,
@@ -148,6 +154,7 @@ pub fn SignUp() -> impl IntoView {
                 email=email.get_untracked().unwrap()
                 password=password.get_untracked().unwrap()
                 name=name.get_untracked().unwrap()
+                is_processing=is_processing
             />
         </Show>
     }

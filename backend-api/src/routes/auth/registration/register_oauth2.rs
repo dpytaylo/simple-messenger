@@ -1,6 +1,6 @@
-use rpc::{dto, procedure, request};
+use rpc::{dto, procedure};
 
-use crate::entities::name::Name;
+use crate::entities::{avatar_uri::AvatarUri, username::Username};
 
 procedure! {
     name: "register_oauth2",
@@ -9,13 +9,10 @@ procedure! {
     error: RegisterOAuth2Error,
 }
 
-#[request]
+#[dto]
 pub struct RegisterOAuth2Request {
-    #[garde(dive)]
-    pub name: Name,
-
-    #[garde(ascii, length(max = 512))]
-    pub avatar: Option<String>,
+    pub name: Username,
+    pub avatar: Option<AvatarUri>,
 }
 
 #[dto]

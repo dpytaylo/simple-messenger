@@ -1,26 +1,25 @@
-use rpc::{dto, procedure, request};
+use rpc::{dto, procedure};
 
-use crate::entities::name::Name;
+use crate::entities::username::Username;
 
 procedure! {
-    name: "is_name_available",
-    request: IsNameAvailableRequest,
-    response: IsNameAvailableResponse,
-    error: IsNameAvailableError,
-}
-
-#[request]
-pub struct IsNameAvailableRequest {
-    #[garde(dive)]
-    pub name: Name,
+    name: "is_username_available",
+    request: IsUsernameAvailableRequest,
+    response: IsUsernameAvailableResponse,
+    error: IsUsernameAvailableError,
 }
 
 #[dto]
-pub struct IsNameAvailableResponse {
+pub struct IsUsernameAvailableRequest {
+    pub name: Username,
+}
+
+#[dto]
+pub struct IsUsernameAvailableResponse {
     pub is_available: bool,
 }
 
 #[dto]
-pub enum IsNameAvailableError {
+pub enum IsUsernameAvailableError {
     Other,
 }

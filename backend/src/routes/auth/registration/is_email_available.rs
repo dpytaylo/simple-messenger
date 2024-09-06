@@ -1,16 +1,11 @@
 use std::{ops::Not, sync::Arc};
 
 use anyhow::Context;
-use axum::extract::State;
-use backend_api::{
-    entities::user::Email,
-    routes::auth::registration::is_email_available::{
-        IsEmailAvailableError, IsEmailAvailableRequest, IsEmailAvailableResponse,
-    },
+use api::routes::auth::registration::is_email_available::{
+    IsEmailAvailableError, IsEmailAvailableRequest, IsEmailAvailableResponse,
 };
-use garde::Valid;
+use axum::extract::State;
 use rpc::server::error::{IntoProcFailure, ProcedureError};
-use backend_db::query::Query;
 use thiserror::Error;
 use tracing::instrument;
 
@@ -33,13 +28,9 @@ impl ProcedureError<IsEmailAvailableError> for IsEmailAvailableServerError {
 #[instrument(skip(state), err)]
 pub async fn is_email_available(
     State(state): State<Arc<ServerState>>,
-    request: Valid<IsEmailAvailableRequest>,
+    request: IsEmailAvailableRequest,
 ) -> Result<IsEmailAvailableResponse, IsEmailAvailableServerError> {
-    let IsEmailAvailableRequest {
-        email: Email(email),
-    } = request.into_inner();
-
-    let is_available = Query::find_user_by_email(&state.db, &email)
+    let is_available = db::user::find_by_email(&state.db, &request.email)
         .await
         .context("failed to find user by email")?
         .is_some()

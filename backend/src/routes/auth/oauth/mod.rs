@@ -1,9 +1,9 @@
+use api::routes::auth::oauth::OAuthClientError;
 use axum::{
     response::{IntoResponse, Response},
     routing::get,
     Router,
 };
-use backend_api::routes::auth::oauth::OAuthClientError;
 use http::StatusCode;
 use serde::Deserialize;
 use strum::IntoStaticStr;
