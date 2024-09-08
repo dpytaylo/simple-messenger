@@ -12,12 +12,12 @@ use tracing::instrument;
 use crate::state::ServerState;
 
 #[derive(Debug, Error)]
-pub enum IsUsernameAvailableServerError {
+pub enum IsUsernameAvailableSErr {
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
 
-impl ProcedureError<IsUsernameAvailableError> for IsUsernameAvailableServerError {
+impl ProcedureError<IsUsernameAvailableError> for IsUsernameAvailableSErr {
     fn into_procedure_error(self) -> impl IntoProcFailure<IsUsernameAvailableError> {
         match self {
             Self::Other(_) => IsUsernameAvailableError::Other.into_proc_failure(),
@@ -29,7 +29,7 @@ impl ProcedureError<IsUsernameAvailableError> for IsUsernameAvailableServerError
 pub async fn is_username_available(
     State(state): State<Arc<ServerState>>,
     request: IsUsernameAvailableRequest,
-) -> Result<IsUsernameAvailableResponse, IsUsernameAvailableServerError> {
+) -> Result<IsUsernameAvailableResponse, IsUsernameAvailableSErr> {
     let is_available = db::user::find_by_name(&state.db, &request.name)
         .await
         .context("failed to check if name is available")?

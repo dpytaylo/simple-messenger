@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Error};
-use api::entities::{email::Email, registration_kind::RegistrationKind};
+use api::{
+    entities::{email::Email, registration_kind::RegistrationKind},
+    routes::auth::oauth::google::{OAuth2GoogleError, OAuth2GoogleRequest, OAuth2GoogleResponse},
+};
 use axum::{
     extract::{Query, State},
     response::Redirect,
@@ -12,8 +15,11 @@ use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, RedirectUrl, RevocationUrl, Scope, TokenResponse, TokenUrl,
 };
+use rpc::server::error::{IntoProcFailure, ProcedureError};
 use serde::Deserialize;
+use thiserror::Error;
 use tower_sessions::Session;
+use tracing::instrument;
 
 use super::{AuthRequest, OAuthError, AUTH_SUCCESS_PAGE_URL, SIGN_UP_OAUTH2_PAGE_URL};
 use crate::{
@@ -23,41 +29,58 @@ use crate::{
 };
 
 pub fn routes() -> Router<ServerStateWrapper> {
-    Router::new()
-        .route("/", get(google))
-        .route("/authorized", get(authorized))
+    Router::new().route("/authorized", get(authorized))
 }
 
 #[derive(Debug, Clone)]
 pub struct GoogleClient(Arc<BasicClient>);
 
-pub fn create_basic_client(environment: &Environment) -> GoogleClient {
-    GoogleClient(Arc::new(
+pub fn create_client(env: &Environment) -> anyhow::Result<GoogleClient> {
+    Ok(GoogleClient(Arc::new(
         BasicClient::new(
-            ClientId::new(environment.google_client_id.clone()),
-            Some(ClientSecret::new(environment.google_client_secret.clone())),
+            ClientId::new(env.google_client_id.clone()),
+            Some(ClientSecret::new(env.google_client_secret.clone())),
             AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into())
-                .expect("Google auth endpoint URL"),
+                .context("Google auth endpoint URL")?,
             Some(
                 TokenUrl::new("https://oauth2.googleapis.com/token".into())
-                    .expect("Google token endpoint URL"),
+                    .context("Google token endpoint URL")?,
             ),
         )
         .set_redirect_uri(
-            RedirectUrl::new(format!(
-                "{}/api/auth/oauth/google/authorized",
-                environment.redirect_url
-            ))
-            .expect("Redirect URL for Google API"),
+            RedirectUrl::new(
+                env.host_url
+                    .join("/api/auth/oauth/google/authorized")?
+                    .into(),
+            )
+            .context("redirect URL for Google API")?,
         )
         .set_revocation_uri(
             RevocationUrl::new("https://oauth2.googleapis.com/revoke".into())
-                .expect("Google revocation endpoint URL"),
+                .context("Google revocation endpoint URL")?,
         ),
-    ))
+    )))
 }
 
-pub async fn google(State(state): State<Arc<ServerState>>) -> Result<Redirect, OAuthError> {
+#[derive(Debug, Error)]
+pub enum OAuth2GoogleSErr {
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
+}
+
+impl ProcedureError<OAuth2GoogleError> for OAuth2GoogleSErr {
+    fn into_procedure_error(self) -> impl IntoProcFailure<OAuth2GoogleError> {
+        match self {
+            Self::Other(_) => OAuth2GoogleError::Other.into_proc_failure(),
+        }
+    }
+}
+
+#[instrument(skip(state), err)]
+pub async fn oauth2_google(
+    State(state): State<Arc<ServerState>>,
+    request: OAuth2GoogleRequest,
+) -> Result<OAuth2GoogleResponse, OAuth2GoogleSErr> {
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
     let (auth_url, csrf_token) = state
@@ -70,8 +93,10 @@ pub async fn google(State(state): State<Arc<ServerState>>) -> Result<Redirect, O
         .set_pkce_challenge(pkce_challenge)
         .url();
 
-    state.mem.insert_oauth_state(csrf_token, pkce_verifier);
-    Ok(Redirect::to(auth_url.as_str()))
+    state.mem.insert_oauth2_state(csrf_token, pkce_verifier);
+    Ok(OAuth2GoogleResponse {
+        uri: auth_url.to_string(),
+    })
 }
 
 #[derive(Deserialize)]
@@ -79,6 +104,7 @@ struct UserProfile {
     email: String,
 }
 
+#[instrument(skip_all, err)]
 pub async fn authorized(
     State(state): State<Arc<ServerState>>,
     session: Session,
@@ -86,7 +112,7 @@ pub async fn authorized(
 ) -> Result<Redirect, OAuthError> {
     let pkce_verifier = state
         .mem
-        .take_oauth_state(&CsrfToken::new(query.state))
+        .take_oauth2_state(&CsrfToken::new(query.state))
         .context("missing pkce verifier")?;
 
     let token = state

@@ -19,7 +19,7 @@ use tracing::instrument;
 use crate::{routes::auth::generate_jwt_token, state::ServerState};
 
 #[derive(Debug, Error)]
-pub enum RegisterServerError {
+pub enum RegisterSErr {
     #[error("account with the same email already exists")]
     AccountWithSameEmailAlreadyExists,
 
@@ -30,7 +30,7 @@ pub enum RegisterServerError {
     Other(#[from] anyhow::Error),
 }
 
-impl ProcedureError<RegisterError> for RegisterServerError {
+impl ProcedureError<RegisterError> for RegisterSErr {
     fn into_procedure_error(self) -> impl IntoProcFailure<RegisterError> {
         match self {
             Self::AccountWithSameEmailAlreadyExists => {
@@ -48,13 +48,13 @@ impl ProcedureError<RegisterError> for RegisterServerError {
 pub async fn register(
     State(state): State<Arc<ServerState>>,
     request: RegisterRequest,
-) -> Result<RegisterResponse, RegisterServerError> {
+) -> Result<RegisterResponse, RegisterSErr> {
     if db::user::find_by_email(&state.db, &request.email)
         .await
         .context("failed to find user by email")?
         .is_some()
     {
-        return Err(RegisterServerError::AccountWithSameEmailAlreadyExists);
+        return Err(RegisterSErr::AccountWithSameEmailAlreadyExists);
     }
 
     let salt = SaltString::generate(&mut OsRng);

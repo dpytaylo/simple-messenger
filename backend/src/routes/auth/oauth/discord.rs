@@ -1,14 +1,19 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Error};
-use api::entities::{
-    avatar_uri::{AvatarUri, AVATAR_SIZE},
-    email::Email,
-    registration_kind::RegistrationKind,
+use api::{
+    entities::{
+        avatar_uri::{AvatarUri, AVATAR_SIZE},
+        email::Email,
+        registration_kind::RegistrationKind,
+    },
+    routes::auth::oauth::discord::{
+        OAuth2DiscordError, OAuth2DiscordRequest, OAuth2DiscordResponse,
+    },
 };
 use axum::{
     extract::{Query, State},
-    response::{IntoResponse, Redirect},
+    response::Redirect,
     routing::get,
     Router,
 };
@@ -16,8 +21,11 @@ use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, RedirectUrl, RevocationUrl, Scope, TokenResponse, TokenUrl,
 };
+use rpc::server::error::{IntoProcFailure, ProcedureError};
 use serde::Deserialize;
+use thiserror::Error;
 use tower_sessions::Session;
+use tracing::{info, instrument};
 
 use super::{AuthRequest, OAuthError, AUTH_SUCCESS_PAGE_URL, SIGN_UP_OAUTH2_PAGE_URL};
 use crate::{
@@ -31,43 +39,58 @@ use crate::{
 };
 
 pub fn routes() -> Router<ServerStateWrapper> {
-    Router::new()
-        .route("/", get(discord))
-        .route("/authorized", get(authorized))
+    Router::new().route("/authorized", get(authorized))
 }
 
 #[derive(Debug, Clone)]
 pub struct DiscordClient(Arc<BasicClient>);
 
-pub fn create_basic_client(environment: &Environment) -> DiscordClient {
-    DiscordClient(Arc::new(
+pub fn create_client(env: &Environment) -> anyhow::Result<DiscordClient> {
+    Ok(DiscordClient(Arc::new(
         BasicClient::new(
-            ClientId::new(environment.discord_client_id.clone()),
-            Some(ClientSecret::new(environment.discord_client_secret.clone())),
+            ClientId::new(env.discord_client_id.clone()),
+            Some(ClientSecret::new(env.discord_client_secret.clone())),
             AuthUrl::new("https://discord.com/oauth2/authorize".into())
-                .expect("Discord auth endpoint URL"),
+                .context("Discord auth endpoint URL")?,
             Some(
                 TokenUrl::new("https://discord.com/api/oauth2/token".into())
-                    .expect("Discord token endpoint URL"),
+                    .context("Discord token endpoint URL")?,
             ),
         )
         .set_redirect_uri(
-            RedirectUrl::new(format!(
-                "{}/api/auth/oauth/discord/authorized",
-                environment.redirect_url
-            ))
-            .expect("Redirect URL for Discord API"),
+            RedirectUrl::new(
+                env.host_url
+                    .join("/api/auth/oauth/discord/authorized")?
+                    .into(),
+            )
+            .context("redirect URL for Discord API")?,
         )
         .set_revocation_uri(
             RevocationUrl::new("https://discord.com/api/oauth2/token/revoke".into())
-                .expect("Discord revocation endpoint URL"),
+                .context("Discord revocation endpoint URL")?,
         ),
-    ))
+    )))
 }
 
-pub async fn discord(
+#[derive(Debug, Error)]
+pub enum OAuth2DiscordSErr {
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
+}
+
+impl ProcedureError<OAuth2DiscordError> for OAuth2DiscordSErr {
+    fn into_procedure_error(self) -> impl IntoProcFailure<OAuth2DiscordError> {
+        match self {
+            Self::Other(_) => OAuth2DiscordError::Other.into_proc_failure(),
+        }
+    }
+}
+
+#[instrument(skip(state), err)]
+pub async fn oauth2_discord(
     State(state): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse, OAuthError> {
+    request: OAuth2DiscordRequest,
+) -> Result<OAuth2DiscordResponse, OAuth2DiscordSErr> {
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
     let (auth_url, csrf_token) = state
@@ -79,8 +102,10 @@ pub async fn discord(
         .set_pkce_challenge(pkce_challenge)
         .url();
 
-    state.mem.insert_oauth_state(csrf_token, pkce_verifier);
-    Ok(Redirect::to(auth_url.as_str()))
+    state.mem.insert_oauth2_state(csrf_token, pkce_verifier);
+    Ok(OAuth2DiscordResponse {
+        uri: auth_url.to_string(),
+    })
 }
 
 #[derive(Deserialize)]
@@ -90,6 +115,7 @@ struct UserProfile {
     avatar: String,
 }
 
+#[instrument(skip_all, err)]
 pub async fn authorized(
     State(state): State<Arc<ServerState>>,
     session: Session,
@@ -97,7 +123,7 @@ pub async fn authorized(
 ) -> Result<Redirect, OAuthError> {
     let pkce_verifier = state
         .mem
-        .take_oauth_state(&CsrfToken::new(query.state))
+        .take_oauth2_state(&CsrfToken::new(query.state))
         .context("missing pkce verifier")?;
 
     let token = state
@@ -140,6 +166,8 @@ pub async fn authorized(
         .request_async(oauth2::reqwest::async_http_client)
         .await
         .context("failed to revoke token")?;
+
+    info!("session id = {:?}", session.id());
 
     let Some(user) = db::user::find_by_email(&state.db, &email)
         .await

@@ -16,11 +16,8 @@ pub mod discord;
 pub mod google;
 pub mod token;
 
-pub const AUTH_SUCCESS_PAGE_URL: &str = "/authorization-success";
-pub const SIGN_UP_OAUTH2_PAGE_URL: &str = "/sign-up-oauth2";
-
-pub const CSRF_TOKEN_KEY: &str = "csrf-token";
-pub const PKCE_VERIFIER_KEY: &str = "pkce-verifier";
+pub const AUTH_SUCCESS_PAGE_URL: &str = "http://localhost:3000/authorization-success";
+pub const SIGN_UP_OAUTH2_PAGE_URL: &str = "http://localhost:3000/sign-up-oauth2";
 
 pub fn routes() -> Router<ServerStateWrapper> {
     Router::new()

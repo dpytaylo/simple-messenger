@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Instant};
+use std::sync::Arc;
 
 use anyhow::Context;
 use api::routes::auth::authenticate::{
@@ -11,13 +11,13 @@ use scrypt::{
     Scrypt,
 };
 use thiserror::Error;
-use tracing::{info, instrument};
+use tracing::instrument;
 
 use super::generate_jwt_token;
 use crate::state::ServerState;
 
 #[derive(Debug, Error)]
-pub enum AuthenticateServerError {
+pub enum AuthenticateSErr {
     #[error("invalid credentials")]
     InvalidCredentials,
 
@@ -25,11 +25,11 @@ pub enum AuthenticateServerError {
     Other(#[from] anyhow::Error),
 }
 
-impl ProcedureError<AuthenticateError> for AuthenticateServerError {
+impl ProcedureError<AuthenticateError> for AuthenticateSErr {
     fn into_procedure_error(self) -> impl IntoProcFailure<AuthenticateError> {
         match self {
-            AuthenticateServerError::InvalidCredentials => AuthenticateError::InvalidCredentials,
-            AuthenticateServerError::Other(_) => AuthenticateError::Other,
+            AuthenticateSErr::InvalidCredentials => AuthenticateError::InvalidCredentials,
+            AuthenticateSErr::Other(_) => AuthenticateError::Other,
         }
     }
 }
@@ -38,16 +38,16 @@ impl ProcedureError<AuthenticateError> for AuthenticateServerError {
 pub async fn authenticate(
     State(state): State<Arc<ServerState>>,
     request: AuthenticateRequest,
-) -> Result<AuthenticateResponse, AuthenticateServerError> {
+) -> Result<AuthenticateResponse, AuthenticateSErr> {
     let Some(user) = db::user::find_by_email(&state.db, &request.email)
         .await
         .context("failed to find user by email")?
     else {
-        return Err(AuthenticateServerError::InvalidCredentials);
+        return Err(AuthenticateSErr::InvalidCredentials);
     };
 
     let Some(db_password) = user.password else {
-        return Err(AuthenticateServerError::InvalidCredentials);
+        return Err(AuthenticateSErr::InvalidCredentials);
     };
 
     let parsed_hash = PasswordHash::new(&db_password).context("failed to hash password")?;
@@ -56,7 +56,7 @@ pub async fn authenticate(
         .verify_password(request.password.value().as_bytes(), &parsed_hash)
         .is_err()
     {
-        return Err(AuthenticateServerError::InvalidCredentials);
+        return Err(AuthenticateSErr::InvalidCredentials);
     }
 
     let token = generate_jwt_token(&state, user.id.into())?;

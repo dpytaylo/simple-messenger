@@ -1,5 +1,6 @@
 use api::routes::auth::{
     authenticate::Authenticate,
+    oauth::{discord::Oauth2Discord, google::Oauth2Google},
     registration::{
         is_email_available::IsEmailAvailable, is_name_available::IsUsernameAvailable,
         register::Register, register_oauth2::RegisterOauth2,
@@ -35,4 +36,6 @@ fn rpc_routes() -> Router<ServerStateWrapper> {
         .route_rpc(Register, register::register)
         .route_rpc(RegisterOauth2, register_oauth2::register_oauth2)
         .route_rpc(Authenticate, authenticate::authenticate)
+        .route_rpc(Oauth2Discord, auth::oauth::discord::oauth2_discord)
+        .route_rpc(Oauth2Google, auth::oauth::google::oauth2_google)
 }

@@ -33,14 +33,14 @@ impl MemoryStorage {
         Self { oauth_states }
     }
 
-    pub fn insert_oauth_state(&self, csrf_token: CsrfToken, pkce_verifier: PkceCodeVerifier) {
+    pub fn insert_oauth2_state(&self, csrf_token: CsrfToken, pkce_verifier: PkceCodeVerifier) {
         self.oauth_states
             .lock()
             .unwrap()
             .insert(csrf_token.secret().into(), (Instant::now(), pkce_verifier));
     }
 
-    pub fn take_oauth_state(&self, csrf_token: &CsrfToken) -> Option<PkceCodeVerifier> {
+    pub fn take_oauth2_state(&self, csrf_token: &CsrfToken) -> Option<PkceCodeVerifier> {
         self.oauth_states
             .lock()
             .unwrap()

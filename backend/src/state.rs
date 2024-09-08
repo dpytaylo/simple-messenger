@@ -39,8 +39,8 @@ impl ServerStateWrapper {
             .build()
             .context("Failed to initialize reqwest::Client")?;
 
-        let discord = oauth::discord::create_basic_client(environment);
-        let google = oauth::google::create_basic_client(environment);
+        let discord = oauth::discord::create_client(environment)?;
+        let google = oauth::google::create_client(environment)?;
 
         let db = PgPoolOptions::new()
             .max_connections(20)
