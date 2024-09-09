@@ -1,0 +1,9 @@
+[package]
+name = "backend-entity"
+edition = "2021"
+version.workspace = true
+
+[dependencies]
+api = { path ="./../backend-api", package = "backend-api" }
+
+uuid.workspace = true

@@ -1,0 +1,10 @@
+[package]
+name = "backend-mem"
+edition = "2021"
+version.workspace = true
+
+[dependencies]
+api = { path = "./../backend-api", package = "backend-api" }
+
+oauth2.workspace = true
+tokio.workspace = true

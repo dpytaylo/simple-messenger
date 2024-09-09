@@ -1,31 +1,10 @@
 {
-  "emmet.includeLanguages": {
-    "rust": "html",
-    "*.rs": "html"
-  },
-  
-  "tailwindCSS.includeLanguages": {
-      "rust": "html",
-      "*.rs": "html"
-  },
-
-  "files.associations": {
-      "*.rs": "rust"
-  },
-
-  "editor.quickSuggestions": {
-    "other": "on",
-    "comments": "on",
-    "strings": true
-  },
-
-  "css.validate": true,
-
-  "rust-analyzer.cargo.features": [
-    "ssr"
-  ],
-
-  "rust-analyzer.linkedProjects": [
-    ".\\migration\\Cargo.toml"
-  ],
+    "[rust]": {
+        "editor.formatOnSave": true
+    },
+    "tailwindCSS.includeLanguages": {
+        "rust": "html",
+        "*.rs": "html"
+    },
+    "css.validate": true,
 }

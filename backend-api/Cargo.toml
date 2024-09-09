@@ -1,0 +1,12 @@
+[package]
+name = "backend-api"
+version.workspace = true
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+garde.workspace = true
+http.workspace = true
+rpc.workspace = true
+serde.workspace = true
+thiserror.workspace = true
