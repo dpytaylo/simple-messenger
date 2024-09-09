@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 api = { path = "./../backend-api", package = "backend-api" }
 db = { path = "./../backend-db", package = "backend-db" }
+mem = { path = "./../backend-mem", package = "backend-mem" }
 
 rpc = { workspace = true, features = ["server"] }
 
@@ -19,11 +20,12 @@ garde.workspace = true
 http.workspace = true
 jsonwebtoken.workspace = true
 oauth2.workspace = true
-rand_chacha.workspace = true
+rand.workspace = true
 reqwest.workspace = true
 scrypt.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+serde_qs.workspace = true
 sqlx.workspace = true
 strum.workspace = true
 time.workspace = true

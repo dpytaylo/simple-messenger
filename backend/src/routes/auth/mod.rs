@@ -1,20 +1,12 @@
 use anyhow::Context;
-use axum::Router;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, Header};
 
-use crate::{
-    authorization::Claims,
-    state::{ServerState, ServerStateWrapper},
-};
+use crate::{authorization::Claims, state::ServerState};
 
 pub mod authenticate;
 pub mod oauth;
 pub mod registration;
-
-pub fn routes() -> Router<ServerStateWrapper> {
-    Router::new().nest("/oauth", oauth::routes())
-}
 
 pub fn generate_jwt_token(state: &ServerState, id: String) -> anyhow::Result<String> {
     let claims = Claims {

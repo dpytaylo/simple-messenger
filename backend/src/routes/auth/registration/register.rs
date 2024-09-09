@@ -7,7 +7,6 @@ use api::{
 };
 use axum::extract::State;
 use http::StatusCode;
-use rand_chacha::rand_core::OsRng;
 use rpc::server::error::{IntoProcFailure, ProcedureError};
 use scrypt::{
     password_hash::{PasswordHasher, SaltString},
@@ -57,7 +56,7 @@ pub async fn register(
         return Err(RegisterSErr::AccountWithSameEmailAlreadyExists);
     }
 
-    let salt = SaltString::generate(&mut OsRng);
+    let salt = SaltString::generate(rand::thread_rng());
 
     let password_hash = Scrypt
         .hash_password(request.password.value().as_bytes(), &salt)

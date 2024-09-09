@@ -1,8 +1,6 @@
 use std::time::Duration;
 
-use api::entities::{
-    avatar_uri::AvatarUri, email::Email, registration_kind::RegistrationKind, sha256::Sha256,
-};
+use api::entities::{avatar_uri::AvatarUri, email::Email, registration_kind::RegistrationKind};
 
 use crate::ttl_map::TtlMap;
 

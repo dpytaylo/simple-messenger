@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use api::entities::sha256::Sha256;
 use oauth2::{CsrfToken, PkceCodeVerifier};
 
 use crate::ttl_map::TtlMap;

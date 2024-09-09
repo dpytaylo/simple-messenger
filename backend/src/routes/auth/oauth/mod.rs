@@ -1,30 +1,14 @@
 use api::routes::auth::oauth::OAuthClientError;
-use axum::{
-    response::{IntoResponse, Response},
-    routing::get,
-    Router,
-};
+use axum::response::{IntoResponse, Response};
 use http::StatusCode;
 use serde::Deserialize;
 use strum::IntoStaticStr;
 use thiserror::Error;
-use token::token_route;
 
-use crate::{error::wrap_error, state::ServerStateWrapper};
+use crate::error::wrap_error;
 
 pub mod discord;
 pub mod google;
-pub mod token;
-
-pub const AUTH_SUCCESS_PAGE_URL: &str = "http://localhost:3000/authorization-success";
-pub const SIGN_UP_OAUTH2_PAGE_URL: &str = "http://localhost:3000/sign-up-oauth2";
-
-pub fn routes() -> Router<ServerStateWrapper> {
-    Router::new()
-        .nest("/discord", discord::routes())
-        .nest("/google", google::routes())
-        .route("/token", get(token_route))
-}
 
 #[derive(Deserialize)]
 pub struct AuthRequest {

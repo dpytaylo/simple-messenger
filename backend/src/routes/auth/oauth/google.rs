@@ -8,8 +8,6 @@ use api::{
 use axum::{
     extract::{Query, State},
     response::Redirect,
-    routing::get,
-    Router,
 };
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
@@ -21,16 +19,12 @@ use thiserror::Error;
 use tower_sessions::Session;
 use tracing::instrument;
 
-use super::{AuthRequest, OAuthError, AUTH_SUCCESS_PAGE_URL, SIGN_UP_OAUTH2_PAGE_URL};
+use super::{AuthRequest, OAuthError};
 use crate::{
     environment::Environment,
     session::{insert_session_key, REGISTRATION_EMAIL_KEY, REGISTRATION_KIND_KEY},
-    state::{ServerState, ServerStateWrapper},
+    state::ServerState,
 };
-
-pub fn routes() -> Router<ServerStateWrapper> {
-    Router::new().route("/authorized", get(authorized))
-}
 
 #[derive(Debug, Clone)]
 pub struct GoogleClient(Arc<BasicClient>);
@@ -93,7 +87,7 @@ pub async fn oauth2_google(
         .set_pkce_challenge(pkce_challenge)
         .url();
 
-    state.mem.insert_oauth2_state(csrf_token, pkce_verifier);
+    state.mem.oauth2_state.insert(&csrf_token, &pkce_verifier);
     Ok(OAuth2GoogleResponse {
         uri: auth_url.to_string(),
     })
@@ -112,7 +106,8 @@ pub async fn authorized(
 ) -> Result<Redirect, OAuthError> {
     let pkce_verifier = state
         .mem
-        .take_oauth2_state(&CsrfToken::new(query.state))
+        .oauth2_state
+        .take(&CsrfToken::new(query.state))
         .context("missing pkce verifier")?;
 
     let token = state
@@ -159,8 +154,10 @@ pub async fn authorized(
         insert_session_key(&session, REGISTRATION_KIND_KEY, RegistrationKind::Google).await?;
         insert_session_key(&session, REGISTRATION_EMAIL_KEY, email).await?;
 
-        return Ok(Redirect::to(SIGN_UP_OAUTH2_PAGE_URL));
+        // return Ok(Redirect::to(SIGN_UP_OAUTH2_PAGE_URL));
     };
 
-    Ok(Redirect::to(AUTH_SUCCESS_PAGE_URL))
+    // Ok(Redirect::to(AUTH_SUCCESS_PAGE_URL))
+
+    todo!();
 }

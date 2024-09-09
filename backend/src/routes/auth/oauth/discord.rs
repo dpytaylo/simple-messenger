@@ -8,39 +8,26 @@ use api::{
         registration_kind::RegistrationKind,
     },
     routes::auth::oauth::discord::{
+        authorized::{
+            OAuth2DiscordAuthorizedError, OAuth2DiscordAuthorizedRequest,
+            OAuth2DiscordAuthorizedResponse,
+        },
         OAuth2DiscordError, OAuth2DiscordRequest, OAuth2DiscordResponse,
     },
 };
-use axum::{
-    extract::{Query, State},
-    response::Redirect,
-    routing::get,
-    Router,
-};
+use axum::extract::State;
+use mem::oauth2_registration::RegistrationData;
 use oauth2::{
     basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, RedirectUrl, RevocationUrl, Scope, TokenResponse, TokenUrl,
 };
+use rand::Rng;
 use rpc::server::error::{IntoProcFailure, ProcedureError};
 use serde::Deserialize;
 use thiserror::Error;
-use tower_sessions::Session;
-use tracing::{info, instrument};
+use tracing::instrument;
 
-use super::{AuthRequest, OAuthError, AUTH_SUCCESS_PAGE_URL, SIGN_UP_OAUTH2_PAGE_URL};
-use crate::{
-    environment::Environment,
-    routes::auth::generate_jwt_token,
-    session::{
-        insert_session_key, JWT_TOKEN_KEY, REGISTRATION_AVATAR_URI_KEY, REGISTRATION_EMAIL_KEY,
-        REGISTRATION_KIND_KEY,
-    },
-    state::{ServerState, ServerStateWrapper},
-};
-
-pub fn routes() -> Router<ServerStateWrapper> {
-    Router::new().route("/authorized", get(authorized))
-}
+use crate::{environment::Environment, routes::auth::generate_jwt_token, state::ServerState};
 
 #[derive(Debug, Clone)]
 pub struct DiscordClient(Arc<BasicClient>);
@@ -86,6 +73,14 @@ impl ProcedureError<OAuth2DiscordError> for OAuth2DiscordSErr {
     }
 }
 
+impl ProcedureError<OAuth2DiscordAuthorizedError> for OAuth2DiscordSErr {
+    fn into_procedure_error(self) -> impl IntoProcFailure<OAuth2DiscordAuthorizedError> {
+        match self {
+            Self::Other(_) => OAuth2DiscordAuthorizedError::Other.into_proc_failure(),
+        }
+    }
+}
+
 #[instrument(skip(state), err)]
 pub async fn oauth2_discord(
     State(state): State<Arc<ServerState>>,
@@ -102,7 +97,8 @@ pub async fn oauth2_discord(
         .set_pkce_challenge(pkce_challenge)
         .url();
 
-    state.mem.insert_oauth2_state(csrf_token, pkce_verifier);
+    state.mem.oauth2_state.insert(&csrf_token, &pkce_verifier);
+
     Ok(OAuth2DiscordResponse {
         uri: auth_url.to_string(),
     })
@@ -115,21 +111,21 @@ struct UserProfile {
     avatar: String,
 }
 
-#[instrument(skip_all, err)]
+#[instrument(skip(state), err)]
 pub async fn authorized(
     State(state): State<Arc<ServerState>>,
-    session: Session,
-    Query(query): Query<AuthRequest>,
-) -> Result<Redirect, OAuthError> {
+    request: OAuth2DiscordAuthorizedRequest,
+) -> Result<OAuth2DiscordAuthorizedResponse, OAuth2DiscordSErr> {
     let pkce_verifier = state
         .mem
-        .take_oauth2_state(&CsrfToken::new(query.state))
-        .context("missing pkce verifier")?;
+        .oauth2_state
+        .take(&CsrfToken::new(request.state))
+        .context("missing pkce verifier")?; // TODO timeout page
 
     let token = state
         .discord
         .0
-        .exchange_code(AuthorizationCode::new(query.code))
+        .exchange_code(AuthorizationCode::new(request.code))
         .set_pkce_verifier(pkce_verifier)
         .request_async(oauth2::reqwest::async_http_client)
         .await
@@ -167,21 +163,47 @@ pub async fn authorized(
         .await
         .context("failed to revoke token")?;
 
-    info!("session id = {:?}", session.id());
+    // info!("session id = {:?}", session.id());
 
     let Some(user) = db::user::find_by_email(&state.db, &email)
         .await
         .map_err(Error::msg)?
     else {
-        insert_session_key(&session, REGISTRATION_KIND_KEY, RegistrationKind::Discord).await?;
-        insert_session_key(&session, REGISTRATION_EMAIL_KEY, email).await?;
-        insert_session_key(&session, REGISTRATION_AVATAR_URI_KEY, avatar_uri).await?;
+        // insert_session_key(&session, REGISTRATION_KIND_KEY, RegistrationKind::Discord).await?;
+        // insert_session_key(&session, REGISTRATION_EMAIL_KEY, email).await?;
+        // insert_session_key(&session, REGISTRATION_AVATAR_URI_KEY, avatar_uri).await?;
 
-        return Ok(Redirect::to(SIGN_UP_OAUTH2_PAGE_URL));
+        // let mut oauth2_session = vec![0u8; 256];
+        // OsRng.fill_bytes(&mut oauth2_session);
+
+        // let url = Url::parse_with_params(
+        //     "http://localhost:3000/sign-up-oauth2",
+        //     &[(
+        //         "state",
+        //         serde_qs::to_string(&oauth2_session).context("failed to serialize state")?,
+        //     )],
+        // )
+        // .context("failed to create url for OAuth2 registration redirection")?;
+
+        let mut rng = rand::thread_rng();
+        let registration_token: String = (0..128).map(|_| rng.gen_range('A'..='z')).collect();
+
+        state.mem.oauth2_registration.insert(
+            registration_token.clone(),
+            RegistrationData {
+                registration_kind: RegistrationKind::Discord,
+                email,
+                avatar_uri: Some(avatar_uri),
+            },
+        );
+
+        return Ok(OAuth2DiscordAuthorizedResponse::RequiresRegistration(
+            registration_token,
+        ));
     };
 
     let token = generate_jwt_token(&state, user.id.to_string())?;
-    insert_session_key(&session, JWT_TOKEN_KEY, token).await?;
+    // insert_session_key(&session, JWT_TOKEN_KEY, token).await?;
 
-    Ok(Redirect::to(AUTH_SUCCESS_PAGE_URL))
+    Ok(OAuth2DiscordAuthorizedResponse::Authorized(token))
 }

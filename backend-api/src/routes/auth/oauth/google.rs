@@ -1,6 +1,6 @@
 use rpc::{dto, procedure};
 
-use crate::entities::sha256::Sha256;
+pub mod authorized;
 
 procedure! {
     name: "oauth2_google",
@@ -10,9 +10,7 @@ procedure! {
 }
 
 #[dto]
-pub struct OAuth2GoogleRequest {
-    pub pkce_code_challenge: Sha256,
-}
+pub struct OAuth2GoogleRequest {}
 
 #[dto]
 pub struct OAuth2GoogleResponse {

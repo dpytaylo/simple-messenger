@@ -21,7 +21,6 @@ pub fn routes(state: ServerStateWrapper) -> Router<ServerStateWrapper> {
     Router::new()
         // TODO add private routes here
         .layer(middleware::map_request_with_state(state, mw_authorization))
-        .nest("/auth", auth::routes())
         .route("/health", get(health::health))
         .nest("/rpc", rpc_routes())
 }

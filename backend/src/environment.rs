@@ -27,7 +27,7 @@ impl Environment {
     pub fn load() -> anyhow::Result<Self> {
         Ok(Self {
             addr: get_env("ADDR")?,
-            host_url: Url::parse(&get_env("REDIRECT_URL")?)?,
+            host_url: Url::parse(&get_env("HOST_URL")?)?,
             database_url: get_env("DATABASE_URL")?,
             jwt_secret: get_env("JWT_SECRET")?,
             discord_client_id: get_env("DISCORD_CLIENT_ID")?,
