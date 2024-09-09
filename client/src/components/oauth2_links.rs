@@ -8,40 +8,38 @@ use tracing::error;
 
 use crate::{
     components::alert_message::{use_alert_message, MessageVariant},
-    utils::{error::log_rpc_error, rpc_provider::use_rpc_client},
+    utils::{client::use_client, error::log_rpc_error},
 };
 
 #[component]
 pub fn OAuth2Links(
     #[prop(default = MaybeSignal::Static(Default::default()), into)] class: MaybeSignal<String>,
 ) -> impl IntoView {
-    let rpc_client = use_rpc_client();
+    let client = use_client();
     let window = use_window();
     let alert = use_alert_message();
 
     let class = move || format!("flex flex-row justify-start gap-3 {}", class());
 
     let google = {
-        let rpc_client = rpc_client.clone();
+        let client = client.clone();
         create_action(move |_: &()| {
-            let rpc_client = rpc_client.clone();
+            let client = client.clone();
             async move {
-                rpc_client
-                    .call::<Oauth2Google>(&OAuth2GoogleRequest {
-                        pkce_code_challenge: todo!(),
-                    })
+                client
+                    .rpc
+                    .call::<Oauth2Google>(&OAuth2GoogleRequest {})
                     .await
             }
         })
     };
 
     let discord = create_action(move |_: &()| {
-        let rpc_client = rpc_client.clone();
+        let client = client.clone();
         async move {
-            rpc_client
-                .call::<Oauth2Discord>(&OAuth2DiscordRequest {
-                    pkce_code_challenge: todo!(),
-                })
+            client
+                .rpc
+                .call::<Oauth2Discord>(&OAuth2DiscordRequest {})
                 .await
         }
     });

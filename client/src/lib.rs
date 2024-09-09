@@ -12,7 +12,8 @@ use pages::{
         success::{AuthSuccess, AUTH_SUCCESS_PAGE_URL},
     },
 };
-use utils::{client::provide_client, rpc_provider::provide_rpc_client};
+use url::Url;
+use utils::client::provide_client;
 
 use crate::{
     pages::auth::{registration::sign_up::SignUp, sign_in::SignIn},
@@ -28,10 +29,8 @@ pub use pages::error_template::ErrorTemplate;
 
 #[component]
 pub fn Frontend() -> impl IntoView {
-    provide_client();
-
-    // TODO backend url should not to be hardcoded
-    provide_rpc_client("http://localhost:8080/api/rpc/");
+    // TODO backend url should not to be hardcoded; receive it from the server (?)
+    provide_client(Url::parse("http://localhost:8080/api/rpc/").unwrap());
 
     view! {
         <div class="font-content">

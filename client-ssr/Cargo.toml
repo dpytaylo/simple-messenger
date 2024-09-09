@@ -7,10 +7,13 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+api = { path = "./../backend-api", package = "backend-api" }
 client.workspace = true
 
+rpc = { workspace = true, features = ["client"] }
+
 anyhow.workspace = true
-axum = { workspace = true, optional = true }
+axum = { workspace = true, optional = true, features = ["macros"] }
 cfg-if.workspace = true
 console_error_panic_hook.workspace = true
 dotenvy = { workspace = true, optional = true }
@@ -19,12 +22,14 @@ leptos.workspace = true
 leptos_axum = { workspace = true, optional = true }
 leptos_meta.workspace = true
 leptos_router.workspace = true
+serde.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 tracing-web = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["rt-multi-thread"], optional = true }
 tower = { workspace = true, optional = true }
 tower-http = { workspace = true, optional = true }
+url.workspace = true
 wasm-bindgen.workspace = true
 
 [features]

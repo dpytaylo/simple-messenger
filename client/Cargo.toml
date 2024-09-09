@@ -24,6 +24,7 @@ serde.workspace = true
 thiserror.workspace = true
 tower-sessions = { workspace = true, optional = true }
 tracing.workspace = true
+url.workspace = true
 uuid = { workspace = true, features = ["v4", "fast-rng"] }
 
 [features]

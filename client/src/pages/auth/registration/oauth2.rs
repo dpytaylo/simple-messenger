@@ -10,11 +10,11 @@ use tracing::error;
 use super::details::Details;
 use crate::components::alert_message::{use_alert_message, MessageOptions, MessageVariant};
 use crate::pages::app::APP_PAGE_URL;
+use crate::pages::auth::registration::sign_up::SIGN_UP_PAGE_URL;
 use crate::pages::auth::registration::summary_oauth2::SummaryOAuth2;
 use crate::utils::client::use_client;
 use crate::utils::defer::defer;
 use crate::utils::error::log_rpc_error;
-use crate::utils::rpc_provider::use_rpc_client;
 
 pub const SIGN_UP_OAUTH2_PAGE_URL: &str = "/sign-up-oauth2";
 
@@ -47,17 +47,37 @@ impl SignUpOAuth2Step {
 pub fn SignUpOAuth2() -> impl IntoView {
     let navigate = use_navigate();
     let alert = use_alert_message();
-    let authorization = use_client();
+    let client = use_client();
+
+    let Some(registration_token) = client.registration_token.get_untracked() else {
+        error!("Registration token is missing");
+
+        alert.create(
+            "Something went wrong",
+            MessageVariant::Failure,
+            MessageOptions {
+                description: Some("Please try sign up again".into()),
+                duration: Some(Duration::from_secs(3)),
+                ..Default::default()
+            },
+        );
+
+        navigate(SIGN_UP_PAGE_URL, NavigateOptions::default());
+        unreachable!("Page should be navigated");
+    };
 
     let (step, set_step) = create_signal(SignUpOAuth2Step::Details);
 
     let name = create_rw_signal(None);
 
-    let register = create_action(move |input: &RegisterOAuth2Request| {
-        let rpc_client = use_rpc_client();
-        let input = input.clone();
+    let register = create_action({
+        let client = client.clone();
+        move |input: &RegisterOAuth2Request| {
+            let client = client.clone();
+            let input = input.clone();
 
-        async move { rpc_client.call::<RegisterOauth2>(&input).await }
+            async move { client.rpc.call::<RegisterOauth2>(&input).await }
+        }
     });
     let register_value = register.value();
     let is_processing = create_rw_signal(false);
@@ -92,7 +112,7 @@ pub fn SignUpOAuth2() -> impl IntoView {
 
         match result {
             Ok(val) => {
-                authorization.authorizate(val.token);
+                client.authorizate(val.token);
                 alert.create(
                     "Successfully registered",
                     MessageVariant::Success,

@@ -10,7 +10,7 @@ use tracing::error;
 use crate::{
     atoms::button::{Button, ButtonKind},
     components::alert_message::{use_alert_message, MessageVariant},
-    utils::{error::log_rpc_error, rpc_provider::use_rpc_client},
+    utils::{client::use_client, error::log_rpc_error},
 };
 
 #[component]
@@ -41,10 +41,10 @@ where
     let disabled = Signal::derive(move || name_error().is_some());
 
     let is_name_available = create_action(move |input: &IsUsernameAvailableRequest| {
-        let rpc_client = use_rpc_client();
+        let client = use_client();
         let input = input.clone();
 
-        async move { rpc_client.call::<IsUsernameAvailable>(&input).await }
+        async move { client.rpc.call::<IsUsernameAvailable>(&input).await }
     });
 
     let is_name_available_value = is_name_available.value();

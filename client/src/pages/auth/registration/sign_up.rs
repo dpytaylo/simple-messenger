@@ -14,7 +14,6 @@ use crate::pages::app::APP_PAGE_URL;
 use crate::utils::client::use_client;
 use crate::utils::defer::defer;
 use crate::utils::error::log_rpc_error;
-use crate::utils::rpc_provider::use_rpc_client;
 
 pub const SIGN_UP_PAGE_URL: &str = "/sign-up";
 
@@ -53,7 +52,7 @@ impl SignUpStep {
 pub fn SignUp() -> impl IntoView {
     let navigate = use_navigate();
     let alert = use_alert_message();
-    let authorization = use_client();
+    let client = use_client();
 
     let (step, set_step) = create_signal(SignUpStep::Email);
 
@@ -61,11 +60,14 @@ pub fn SignUp() -> impl IntoView {
     let password = create_rw_signal(None);
     let name = create_rw_signal(None);
 
-    let register = create_action(move |input: &RegisterRequest| {
-        let rpc_client = use_rpc_client();
-        let input = input.clone();
+    let register = create_action({
+        let client = client.clone();
+        move |input: &RegisterRequest| {
+            let client = client.clone();
+            let input = input.clone();
 
-        async move { rpc_client.call::<Register>(&input).await }
+            async move { client.rpc.call::<Register>(&input).await }
+        }
     });
     let register_value = register.value();
     let is_processing = create_rw_signal(false);
@@ -102,7 +104,7 @@ pub fn SignUp() -> impl IntoView {
 
         match result {
             Ok(val) => {
-                authorization.authorizate(val.token);
+                client.authorizate(val.token);
                 alert.create(
                     "Successfully registered",
                     MessageVariant::Success,

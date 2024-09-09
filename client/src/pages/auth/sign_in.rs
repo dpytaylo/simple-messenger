@@ -18,7 +18,7 @@ use crate::{
         oauth2_links::OAuth2Links,
     },
     pages::{app::APP_PAGE_URL, auth::registration::sign_up::SIGN_UP_PAGE_URL},
-    utils::{client::use_client, defer::defer, error::log_rpc_error, rpc_provider::use_rpc_client},
+    utils::{client::use_client, defer::defer, error::log_rpc_error},
 };
 
 pub const SIGN_IN_PAGE_URL: &str = "/sign-in";
@@ -27,7 +27,7 @@ pub const SIGN_IN_PAGE_URL: &str = "/sign-in";
 pub fn SignIn() -> impl IntoView {
     let navigate = use_navigate();
     let alert = use_alert_message();
-    let authorization = use_client();
+    let client = use_client();
 
     let email_node: NodeRef<html::Input> = create_node_ref();
     let password_node: NodeRef<html::Input> = create_node_ref();
@@ -36,11 +36,14 @@ pub fn SignIn() -> impl IntoView {
     let (password_error, set_password_error) = create_signal(None);
     let disabled = Signal::derive(move || email_error().is_some() || password_error().is_some());
 
-    let authenticate = create_action(move |input: &AuthenticateRequest| {
-        let rpc_client = use_rpc_client();
-        let input = input.clone();
+    let authenticate = create_action({
+        let client = client.clone();
+        move |input: &AuthenticateRequest| {
+            let client = client.clone();
+            let input = input.clone();
 
-        async move { rpc_client.call::<Authenticate>(&input).await }
+            async move { client.rpc.call::<Authenticate>(&input).await }
+        }
     });
     let authenticate_value = authenticate.value();
     let (is_processing, set_is_processing) = create_signal(false);
@@ -89,7 +92,7 @@ pub fn SignIn() -> impl IntoView {
 
         match result {
             Ok(val) => {
-                authorization.authorizate(val.token);
+                client.authorizate(val.token);
                 alert.create(
                     "Successfully authenticated",
                     MessageVariant::Success,

@@ -15,7 +15,7 @@ use crate::{
         oauth2_links::OAuth2Links,
     },
     pages::auth::sign_in::SIGN_IN_PAGE_URL,
-    utils::{error::log_rpc_error, rpc_provider::use_rpc_client},
+    utils::{client::use_client, error::log_rpc_error},
 };
 
 #[component]
@@ -28,12 +28,11 @@ where
     let (email_error, set_email_error) = create_signal(None);
     let disabled = Signal::derive(move || email_error().is_some());
 
-    let rpc_client = use_rpc_client();
     let is_email_available = create_action(move |input: &IsEmailAvailableRequest| {
-        let rpc_client = rpc_client.clone();
+        let client = use_client();
         let input = input.clone();
 
-        async move { rpc_client.call::<IsEmailAvailable>(&input).await }
+        async move { client.rpc.call::<IsEmailAvailable>(&input).await }
     });
 
     let is_email_available_value = is_email_available.value();

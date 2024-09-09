@@ -1,14 +1,18 @@
 use codee::string::FromToStringCodec;
 use leptos::*;
 use leptos_use::{use_cookie_with_options, SameSite, UseCookieOptions};
+use rpc::client::RpcClient;
+use url::Url;
 
 #[derive(Debug, Clone)]
 pub struct Client {
     pub auth: Signal<Option<String>>,
     set_auth: WriteSignal<Option<String>>,
+    pub registration_token: RwSignal<Option<String>>,
+    pub rpc: RpcClient,
 }
 
-pub fn provide_client() {
+pub fn provide_client(url: Url) {
     let (auth, set_auth) = use_cookie_with_options::<String, FromToStringCodec>(
         "auth",
         UseCookieOptions::default()
@@ -16,7 +20,12 @@ pub fn provide_client() {
             .same_site(SameSite::Strict),
     );
 
-    provide_context(Client { auth, set_auth });
+    provide_context(Client {
+        auth,
+        set_auth,
+        rpc: RpcClient::new(url).unwrap(),
+        registration_token: RwSignal::default(),
+    });
 }
 
 pub fn use_client() -> Client {
